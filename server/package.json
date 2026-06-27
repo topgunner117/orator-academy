@@ -1,0 +1,22 @@
+{
+  "name": "orator-academy-server",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Backend for Orator Academy Database — AI note parsing, payments, integrations",
+  "scripts": {
+    "dev": "node --watch server.js",
+    "start": "node server.js",
+    "imap-test": "node scripts/imap-test.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.70.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "imapflow": "^1.0.171",
+    "mailparser": "^3.7.1",
+    "pg": "^8.13.1",
+    "twilio": "^5.3.5"
+  }
+}
