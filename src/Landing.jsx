@@ -58,31 +58,37 @@ export default function Landing({ onEnter }) {
           Schedules, students, progress &amp; payments — one quietly powerful studio for the modern speaking coach.
         </p>
 
-        <div className={`oa-signin${error ? ' error' : ''}`}>
-          <input
-            className="oa-pass"
-            type="password"
-            autoFocus
-            placeholder="Password"
-            value={pw}
-            onChange={(e) => {
-              setPw(e.target.value)
-              setError(false)
-            }}
-            onKeyDown={(e) => e.key === 'Enter' && enter()}
-            aria-label="Password"
-          />
-          <button className="oa-enter" onClick={enter}>
-            <span className="oa-enter-label">Enter the studio</span>
-            <span className="oa-enter-ico">→</span>
-            <span className="oa-enter-shine" />
-          </button>
+        <div className="oa-loginbox">
+          <label className="oa-pass-label" htmlFor="oa-pw">
+            Password
+          </label>
+          <div className={`oa-signin${error ? ' error' : ''}`}>
+            <input
+              id="oa-pw"
+              className="oa-pass"
+              type="password"
+              autoFocus
+              placeholder="Type your password here…"
+              value={pw}
+              onChange={(e) => {
+                setPw(e.target.value)
+                setError(false)
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && enter()}
+              aria-label="Password"
+            />
+            <button className="oa-enter" onClick={enter}>
+              <span className="oa-enter-label">Enter the studio</span>
+              <span className="oa-enter-ico">→</span>
+              <span className="oa-enter-shine" />
+            </button>
+          </div>
         </div>
 
         <div className={`oa-hint${error ? ' err' : ''}`}>
           {error ? 'Incorrect password — try again' : (
             <>
-              Enter the password, then press <kbd>Enter</kbd>
+              Type the password in the box, then press <kbd>Enter</kbd>
             </>
           )}
         </div>

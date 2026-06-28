@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { useStore, nowOf } from '../store.jsx'
 import { studioTotals, studentLedger, studentOwed } from '../utils/payments.js'
 import { isoDate, parseISO } from '../utils/dates.js'
-import { studentName, studentById } from '../utils/helpers.js'
+import { studentName, studentById, studentPhones } from '../utils/helpers.js'
 import { buildReminderMessage } from '../utils/sms.js'
 import { sendPaymentReminder } from '../utils/api.js'
 import Modal from '../components/Modal.jsx'
@@ -228,9 +228,9 @@ function StudentLedger({ studentId, today }) {
           <button
             className="btn btn-primary"
             onClick={() => setReminderOpen(true)}
-            disabled={!s?.parentPhone || owed.owed <= 0}
+            disabled={!studentPhones(s).length || owed.owed <= 0}
             title={
-              !s?.parentPhone
+              !studentPhones(s).length
                 ? 'Add a parent phone number on the Students page first'
                 : owed.owed <= 0
                   ? 'Nothing is owed'
@@ -239,7 +239,7 @@ function StudentLedger({ studentId, today }) {
           >
             📱 Text payment reminder
           </button>
-          {!s?.parentPhone && <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>No parent phone on file</div>}
+          {!studentPhones(s).length && <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>No parent phone on file</div>}
         </div>
       </div>
 
@@ -357,8 +357,9 @@ function StudentLedger({ studentId, today }) {
 // (Settings → Integrations) so the teacher always sees exactly what will be sent first.
 function ReminderModal({ student, studentId, today, onClose }) {
   const { state } = useStore()
+  const phoneOptions = studentPhones(student)
   const [message, setMessage] = useState(() => buildReminderMessage(state, studentId, today))
-  const [phone, setPhone] = useState(student?.parentPhone || '')
+  const [phone, setPhone] = useState(phoneOptions[0] || '')
   const [status, setStatus] = useState('preview') // preview | sending | sent | error
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
@@ -414,6 +415,21 @@ function ReminderModal({ student, studentId, today, onClose }) {
         <>
           <div className="field">
             <label className="label">To (parent phone)</label>
+            {phoneOptions.length > 1 && (
+              <select
+                className="select"
+                value={phoneOptions.includes(phone) ? phone : ''}
+                onChange={(e) => setPhone(e.target.value)}
+                style={{ maxWidth: 240, marginBottom: 8 }}
+              >
+                {phoneOptions.map((p, i) => (
+                  <option key={i} value={p}>
+                    {p}
+                    {i === 0 ? ' · primary' : ''}
+                  </option>
+                ))}
+              </select>
+            )}
             <input className="input" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} style={{ maxWidth: 240 }} />
           </div>
           <div className="field" style={{ marginTop: 14 }}>

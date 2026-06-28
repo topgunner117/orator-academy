@@ -252,7 +252,24 @@
   55% { left: 150%; }
   100% { left: 150%; }
 }
-/* Sign-in (password) */
+/* Sign-in (password) — a clearly visible white field with a label */
+.oa-loginbox {
+  opacity: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.oa-landing.ready .oa-loginbox {
+  animation: oa-rise 0.95s cubic-bezier(0.2, 0.7, 0.2, 1) 0.82s forwards;
+}
+.oa-pass-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.85);
+}
 .oa-signin {
   display: flex;
   align-items: center;
@@ -261,30 +278,26 @@
   flex-wrap: wrap;
 }
 .oa-pass {
-  opacity: 0;
-  padding: 17px 24px;
-  border-radius: 16px;
-  border: 1.5px solid rgba(255, 255, 255, 0.5);
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
-  font-size: 16px;
-  letter-spacing: 0.06em;
-  width: 230px;
+  padding: 16px 22px;
+  border-radius: 14px;
+  border: 2px solid #ffffff;
+  background: #ffffff;
+  color: #15172b;
+  font-size: 17px;
+  letter-spacing: 0.04em;
+  width: 260px;
   outline: none;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 8px 24px rgba(0, 0, 0, 0.25);
-  transition: border 0.15s, background 0.15s, box-shadow 0.15s;
-}
-.oa-landing.ready .oa-pass {
-  animation: oa-rise 0.95s cubic-bezier(0.2, 0.7, 0.2, 1) 0.82s forwards;
+  caret-color: #5648d8;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  transition: border 0.15s, box-shadow 0.15s;
 }
 .oa-pass::placeholder {
-  color: rgba(255, 255, 255, 0.62);
-  letter-spacing: 0.02em;
+  color: #8a8fa6;
+  letter-spacing: 0.01em;
 }
 .oa-pass:focus {
-  border-color: rgba(124, 92, 240, 0.9);
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 0 0 3px rgba(124, 92, 240, 0.22);
+  border-color: #7b5cf0;
+  box-shadow: 0 0 0 4px rgba(124, 92, 240, 0.45), 0 10px 30px rgba(0, 0, 0, 0.35);
 }
 .oa-signin.error .oa-pass {
   border-color: #ff6b81;

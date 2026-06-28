@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react'
 import { useStore } from '../store.jsx'
 import Modal from '../components/Modal.jsx'
 import Avatar from '../components/Avatar.jsx'
-import { studentName, readImageScaled } from '../utils/helpers.js'
+import { studentName, readImageScaled, studentPhones } from '../utils/helpers.js'
 
 export default function StudentsPage() {
   const { state, dispatch } = useStore()
@@ -117,8 +117,14 @@ function StudentCard({ student }) {
           Enrolled {count} {count === 1 ? 'class' : 'classes'}
         </div>
         <div className="muted student-phone" style={{ fontSize: 11.5 }}>
-          {student.parentPhone ? `📱 ${student.parentPhone}` : 'No parent phone'}
+          {(() => {
+            const ph = studentPhones(student)
+            return ph.length ? `📱 ${ph[0]}${ph.length > 1 ? ` +${ph.length - 1}` : ''}` : 'No parent phone'
+          })()}
         </div>
+        <button className="btn btn-sm student-edit-btn" onClick={() => setEditing(true)}>
+          ✎ Edit
+        </button>
       </div>
       {editing && <EditStudentModal student={student} onClose={() => setEditing(false)} />}
       {student.image && (
@@ -144,15 +150,55 @@ function StudentCard({ student }) {
   )
 }
 
+// Editable list of parent phone numbers (add / remove multiple).
+function PhoneListEditor({ phones, setPhones }) {
+  const update = (i, v) => setPhones(phones.map((p, j) => (j === i ? v : p)))
+  const add = () => setPhones([...phones, ''])
+  const remove = (i) => setPhones(phones.length === 1 ? [''] : phones.filter((_, j) => j !== i))
+
+  return (
+    <div className="field" style={{ marginTop: 14 }}>
+      <label className="label">
+        Parent phone numbers <span className="muted">(for payment-reminder texts — add as many as you need)</span>
+      </label>
+      <div className="phone-list">
+        {phones.map((p, i) => (
+          <div className="phone-row" key={i}>
+            <input
+              className="input"
+              type="tel"
+              value={p}
+              placeholder={i === 0 ? '(555) 123-4567  · primary' : '(555) 123-4567'}
+              onChange={(e) => update(i, e.target.value)}
+            />
+            <button
+              className="icon-btn"
+              style={{ width: 36, height: 36, flexShrink: 0 }}
+              title="Remove this number"
+              onClick={() => remove(i)}
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+      <button className="btn btn-sm" style={{ marginTop: 8 }} onClick={add}>
+        ＋ Add another number
+      </button>
+    </div>
+  )
+}
+
 function AddStudentModal({ onClose }) {
   const { dispatch } = useStore()
   const [first, setFirst] = useState('')
   const [last, setLast] = useState('')
-  const [phone, setPhone] = useState('')
+  const [phones, setPhones] = useState([''])
 
   const save = () => {
     if (!first.trim()) return
-    dispatch({ type: 'ADD_STUDENT', firstName: first, lastName: last, parentPhone: phone })
+    const clean = phones.map((p) => p.trim()).filter(Boolean)
+    dispatch({ type: 'ADD_STUDENT', firstName: first, lastName: last, parentPhones: clean })
     onClose()
   }
 
@@ -179,7 +225,6 @@ function AddStudentModal({ onClose }) {
             autoFocus
             value={first}
             onChange={(e) => setFirst(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && save()}
             placeholder="Jordan"
           />
         </div>
@@ -187,28 +232,10 @@ function AddStudentModal({ onClose }) {
           <label className="label">
             Last name <span className="muted">(optional)</span>
           </label>
-          <input
-            className="input"
-            value={last}
-            onChange={(e) => setLast(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && save()}
-            placeholder="Reyes"
-          />
+          <input className="input" value={last} onChange={(e) => setLast(e.target.value)} placeholder="Reyes" />
         </div>
       </div>
-      <div className="field" style={{ marginTop: 14 }}>
-        <label className="label">
-          Parent phone <span className="muted">(optional — for payment-reminder texts)</span>
-        </label>
-        <input
-          className="input"
-          type="tel"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && save()}
-          placeholder="(555) 123-4567"
-        />
-      </div>
+      <PhoneListEditor phones={phones} setPhones={setPhones} />
     </Modal>
   )
 }
@@ -217,14 +244,18 @@ function EditStudentModal({ student, onClose }) {
   const { dispatch } = useStore()
   const [first, setFirst] = useState(student.firstName || '')
   const [last, setLast] = useState(student.lastName || '')
-  const [phone, setPhone] = useState(student.parentPhone || '')
+  const [phones, setPhones] = useState(() => {
+    const p = studentPhones(student)
+    return p.length ? p : ['']
+  })
 
   const save = () => {
     if (!first.trim()) return
+    const clean = phones.map((p) => p.trim()).filter(Boolean)
     dispatch({
       type: 'UPDATE_STUDENT',
       id: student.id,
-      patch: { firstName: first.trim(), lastName: last.trim(), parentPhone: phone.trim() },
+      patch: { firstName: first.trim(), lastName: last.trim(), parentPhones: clean, parentPhone: clean[0] || '' },
     })
     onClose()
   }
@@ -256,19 +287,7 @@ function EditStudentModal({ student, onClose }) {
           <input className="input" value={last} onChange={(e) => setLast(e.target.value)} />
         </div>
       </div>
-      <div className="field" style={{ marginTop: 14 }}>
-        <label className="label">
-          Parent phone <span className="muted">(for payment-reminder texts)</span>
-        </label>
-        <input
-          className="input"
-          type="tel"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && save()}
-          placeholder="(555) 123-4567"
-        />
-      </div>
+      <PhoneListEditor phones={phones} setPhones={setPhones} />
     </Modal>
   )
 }

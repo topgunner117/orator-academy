@@ -1,0 +1,22 @@
+# dependencies
+node_modules/
+server/node_modules/
+
+# production build output (Railway rebuilds this)
+dist/
+
+# secrets & environment (NEVER commit these)
+.env
+.env.*
+!.env.example
+server/.env
+server/.env.*
+!server/.env.example
+
+# local JSON data store (cloud uses Postgres)
+server/data/
+
+# logs / OS cruft
+*.log
+.DS_Store
+Thumbs.db

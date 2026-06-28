@@ -14,6 +14,14 @@ export function studentById(state, id) {
   return state.students.find((s) => s.id === id)
 }
 
+// A student's parent phone numbers as an array (supports the new multi-number field and the
+// legacy single `parentPhone`). First entry is the primary.
+export function studentPhones(s) {
+  if (!s) return []
+  if (Array.isArray(s.parentPhones)) return s.parentPhones.filter((p) => p && p.trim())
+  return s.parentPhone ? [s.parentPhone] : []
+}
+
 // Read an image file, downscale to a square thumbnail, and return a compact JPEG data URL.
 export function readImageScaled(file, max = 256) {
   return new Promise((resolve, reject) => {

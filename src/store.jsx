@@ -82,7 +82,10 @@ function reducer(state, action) {
       return { ...state, spoofDate: action.value || null }
 
     // ── Students ──────────────────────────────────────────────────────────
-    case 'ADD_STUDENT':
+    case 'ADD_STUDENT': {
+      const phones = (action.parentPhones || (action.parentPhone ? [action.parentPhone] : []))
+        .map((p) => (p || '').trim())
+        .filter(Boolean)
       return {
         ...state,
         students: [
@@ -91,12 +94,14 @@ function reducer(state, action) {
             id: uid(),
             firstName: action.firstName.trim(),
             lastName: (action.lastName || '').trim(),
-            parentPhone: (action.parentPhone || '').trim(),
+            parentPhones: phones,
+            parentPhone: phones[0] || '', // legacy mirror (first = primary)
             createdAt: isoDate(new Date()),
             archived: false,
           },
         ],
       }
+    }
 
     case 'UPDATE_STUDENT':
       return {

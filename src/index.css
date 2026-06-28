@@ -1592,6 +1592,25 @@ select {
 .student-phone {
   margin-top: 2px;
 }
+.student-edit-btn {
+  margin-top: 8px;
+  align-self: flex-start;
+}
+
+/* Multi phone-number editor */
+.phone-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.phone-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.phone-row .input {
+  flex: 1;
+}
 
 /* Payments — reminder call-to-action in the ledger summary */
 .reminder-cta {
