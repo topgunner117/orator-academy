@@ -25,7 +25,22 @@ export function detectProvider({ from = '', subject = '', text = '', html = '' }
 
 // A refund/declined/outgoing email → flag, don't auto-apply.
 function isRefundOrDecline(blob) {
-  return /\b(refund|refunded|reversed|declined|canceled|cancelled|returned|request(ed)? money|you paid)\b/i.test(blob)
+  return /\b(refund|refunded|reversed|declined|canceled|cancelled|returned|request(ed)? money)\b/i.test(blob)
+}
+
+// OUTGOING money — money the account owner SENT to someone else (a Venmo/PayPal/Zelle payment
+// receipt). These must be ignored, never credited. We catch them deterministically (zero tokens)
+// before Claude. Note these match the "you …" direction, NOT "… you" (which is incoming):
+//   "You paid Jane $40" / "You sent $40 to Jane" / "Your payment to Jane" / "Receipt for your payment".
+function isOutgoingPayment(blob) {
+  return (
+    /\byou\s+paid\b/i.test(blob) ||
+    /\byou\s+sent\b/i.test(blob) ||
+    /\byou'?ve\s+sent\b/i.test(blob) ||
+    /\byour\s+payment\s+to\b/i.test(blob) ||
+    /\breceipt\s+for\s+your\s+payment\b/i.test(blob) ||
+    /\b(sent|paid)\s+\$?[\d,]+(?:\.\d{1,2})?\s+to\b/i.test(blob)
+  )
 }
 
 // Claude reads the email and returns the transaction. Strict JSON via structured outputs.
@@ -38,7 +53,7 @@ async function parseWithClaude(provider, { subject, text }) {
       senderName: { type: 'string', description: "Name of the person who SENT the money. '' if unknown." },
       memo: { type: 'string', description: "The full memo / note / 'for' text the sender wrote, verbatim — include ALL names if several are listed. '' if none." },
       transactionId: { type: 'string', description: "Confirmation / transaction number. '' if none." },
-      isPayment: { type: 'boolean', description: 'true only if money was RECEIVED (not a refund, a request, or a receipt of money you sent).' },
+      isPayment: { type: 'boolean', description: 'true ONLY if money was RECEIVED by the account owner (someone paid THEM). false for any money the account owner SENT or PAID to someone else, refunds, payment requests, or receipts of outgoing payments.' },
     },
     required: ['amount', 'senderName', 'memo', 'transactionId', 'isPayment'],
     additionalProperties: false,
@@ -46,7 +61,7 @@ async function parseWithClaude(provider, { subject, text }) {
   const resp = await client.messages.create({
     model: EMAIL_MODEL,
     max_tokens: 500,
-    system: `Extract the transaction details from this ${provider} payment-notification email. Only set isPayment=true when money was RECEIVED by the account owner. The memo is where a parent writes which student(s) the payment is for — copy it verbatim, keeping every name they listed.`,
+    system: `Extract the transaction details from this ${provider} payment-notification email. Set isPayment=true ONLY when money was RECEIVED by the account owner ("X paid you", "you received $Y from X"). Set isPayment=false for OUTGOING money the account owner sent or paid to someone else ("you paid X", "you sent $Y to X", "your payment to X", "receipt for your payment") — ignore those. The memo is where a parent writes which student(s) the payment is for — copy it verbatim, keeping every name they listed.`,
     messages: [{ role: 'user', content: [{ type: 'text', text: `Subject: ${subject}\n\n${text}`.slice(0, 8000) }] }],
     output_config: { format: { type: 'json_schema', schema } },
   })
@@ -105,6 +120,11 @@ export async function parsePaymentEmail(email) {
 
   if (isRefundOrDecline(blob)) {
     return { provider, flagged: true, reason: 'refund-or-non-payment', amount: 0, senderName: '', memo: '', transactionId: null, usedModel: null }
+  }
+
+  // Ignore OUTGOING payments (money the account owner sent) — only received money is credited.
+  if (isOutgoingPayment(blob)) {
+    return { provider, flagged: true, reason: 'outgoing-payment', amount: 0, senderName: '', memo: '', transactionId: null, usedModel: null }
   }
 
   // Claude reads EVERY email — no tokenless regex path.
