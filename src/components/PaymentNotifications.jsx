@@ -32,7 +32,12 @@ export default function PaymentNotifications() {
           <div className="notif-row" key={u.id}>
             <div style={{ minWidth: 0 }}>
               <div style={{ fontWeight: 700 }}>
-                Student unknown payment · <span style={{ color: 'var(--accent)' }}>${Number(u.amount).toFixed(2)}</span>
+                Student unknown payment ·{' '}
+                {u.amount ? (
+                  <span style={{ color: 'var(--accent)' }}>${Number(u.amount).toFixed(2)}</span>
+                ) : (
+                  <span style={{ color: 'var(--amber)' }}>amount unknown</span>
+                )}
               </div>
               <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
                 {fmtDateTime(u.ts)} · from {u.senderName || 'unknown'}
@@ -65,9 +70,11 @@ function AssignPaymentModal({ payment, onClose }) {
   const [reason, setReason] = useState('group') // group | oneonone | summer  (default group; if /40 it's group anyway)
   const [siblings, setSiblings] = useState(false)
   const [picked, setPicked] = useState([])
+  const [amount, setAmount] = useState(payment.amount ? String(payment.amount) : '')
 
   const isSummer = reason === 'summer'
   const need = siblings ? 2 : 1
+  const amt = Math.round((parseFloat(amount) || 0) * 100) / 100
 
   const togglePick = (id) =>
     setPicked((cur) => {
@@ -76,17 +83,18 @@ function AssignPaymentModal({ payment, onClose }) {
       return cur.length >= 2 ? [cur[1], id] : [...cur, id]
     })
 
-  const canAssign = isSummer || picked.length === need
+  const canAssign = amt > 0 && (isSummer || picked.length === need)
   const apply = () => {
+    if (amt <= 0) return
     if (isSummer) {
-      dispatch({ type: 'ASSIGN_UNASSIGNED_TO_SUMMER', id: payment.id })
+      dispatch({ type: 'ASSIGN_UNASSIGNED_TO_SUMMER', id: payment.id, amount: amt })
     } else if (picked.length === need) {
-      dispatch({ type: 'ASSIGN_UNASSIGNED_PAYMENT', id: payment.id, studentIds: picked })
+      dispatch({ type: 'ASSIGN_UNASSIGNED_PAYMENT', id: payment.id, studentIds: picked, amount: amt })
     } else return
     onClose()
   }
 
-  const share = siblings ? Number(payment.amount) / 2 : Number(payment.amount)
+  const share = siblings ? amt / 2 : amt
 
   return (
     <Modal
@@ -105,11 +113,26 @@ function AssignPaymentModal({ payment, onClose }) {
       }
     >
       <div className="assign-head">
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 18 }}>${Number(payment.amount).toFixed(2)}</div>
-          <div className="muted" style={{ fontSize: 12.5 }}>
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label className="label">Amount received</label>
+          <div className="affix">
+            <span className="affix-pre">$</span>
+            <input
+              className="input"
+              type="number"
+              min="0"
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0.00"
+              autoFocus={!payment.amount}
+              style={{ paddingLeft: 26, maxWidth: 170 }}
+            />
+          </div>
+          <div className="muted" style={{ fontSize: 12.5, marginTop: 6 }}>
             from {payment.senderName || 'unknown'}
             {payment.memo ? ` · “${payment.memo}”` : ''} · {payment.provider}
+            {!payment.amount && <span style={{ color: 'var(--amber)' }}> · amount not detected — enter it above</span>}
           </div>
         </div>
       </div>
@@ -127,8 +150,8 @@ function AssignPaymentModal({ payment, onClose }) {
           </button>
         ))}
       </div>
-      {reason === 'group' && payment.amount % 40 === 0 && (
-        <div className="muted" style={{ fontSize: 11.5, marginTop: 4 }}>${payment.amount} is a multiple of $40 — group classes.</div>
+      {reason === 'group' && amt > 0 && amt % 40 === 0 && (
+        <div className="muted" style={{ fontSize: 11.5, marginTop: 4 }}>${amt} is a multiple of $40 — group classes.</div>
       )}
 
       {isSummer ? (

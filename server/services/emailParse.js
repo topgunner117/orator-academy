@@ -81,8 +81,10 @@ function parseTestEmail(blob) {
     memo: cleaned, // the email text WITHOUT the trigger word → real student name(s) match here
     transactionId: null,
     usedModel: 'test-hook',
-    flagged: amount > 0 ? false : true,
-    reason: amount > 0 ? null : 'test-no-amount',
+    // A test email is always a payment intent — never flag it. If the amount couldn't be read,
+    // the pipeline still routes it to Notifications for manual review (set the amount there).
+    flagged: false,
+    reason: null,
   }
 }
 // ─────────────────────────────────────────────────────────────────────────────

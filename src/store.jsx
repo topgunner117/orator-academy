@@ -436,7 +436,8 @@ function reducer(state, action) {
     case 'ASSIGN_UNASSIGNED_PAYMENT': {
       const u = state.unassignedPayments.find((x) => x.id === action.id)
       if (!u || !action.studentIds?.length) return state
-      const share = Math.round((u.amount / action.studentIds.length) * 100) / 100
+      const total = action.amount != null ? action.amount : u.amount // manual-review amount wins
+      const share = Math.round((total / action.studentIds.length) * 100) / 100
       const created = action.studentIds.map((sid) => ({
         id: uid(),
         studentId: sid,
@@ -463,7 +464,7 @@ function reducer(state, action) {
           ...state.summerPayments,
           {
             id: uid(),
-            amount: u.amount,
+            amount: action.amount != null ? action.amount : u.amount,
             dateReceived: u.dateReceived,
             ts: new Date().toISOString(),
             note: (u.memo || u.senderName || 'Summer lessons').trim(),

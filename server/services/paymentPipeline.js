@@ -71,8 +71,9 @@ export async function processEmail(email, { capture = true } = {}) {
     const { state } = await store.getState()
     const matched = matchStudentsInMemo(parsed.memo, state.students || [])
 
-    if (matched.length === 0) {
-      // No student named → goes to the Notifications queue for the teacher to assign.
+    if (!parsed.amount || matched.length === 0) {
+      // Any payment we can't fully resolve — no amount OR no student named — goes to the
+      // Notifications queue for manual review (the teacher sets the amount and the student there).
       await store.addUnassignedPayment({
         amount: parsed.amount,
         dateReceived: date,
