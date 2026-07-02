@@ -13,6 +13,7 @@ export const CLASS_TYPES = {
   group: { id: 'group', label: 'Group class', billed: true, recurring: true, maxStudents: Infinity },
   oneonone: { id: 'oneonone', label: '1-on-1', billed: false, recurring: true, maxStudents: 1 },
   makeup: { id: 'makeup', label: 'Makeup 1-on-1', billed: false, recurring: false, maxStudents: 1 },
+  summer: { id: 'summer', label: 'Summer lessons', billed: false, recurring: false, maxStudents: Infinity },
 }
 
 // Performance metrics — measured out of 5 in 0.5 (half-star) intervals

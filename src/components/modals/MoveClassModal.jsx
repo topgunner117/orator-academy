@@ -11,8 +11,14 @@ export default function MoveClassModal({ proposal, onClose }) {
   const [end, setEnd] = useState(proposal.endTime)
   const [error, setError] = useState('')
 
+  const isSummer = proposal.occ.type === 'summer'
+
   const confirm = () => {
-    if (isInBreak(parseISO(date))) return setError('No classes between June 18 and the start of October.')
+    // Summer-lesson days live inside the break window; every other class must stay outside it.
+    if (isSummer && !isInBreak(parseISO(date)))
+      return setError('Summer lessons stay in the break window (June 18 → October).')
+    if (!isSummer && isInBreak(parseISO(date)))
+      return setError('No classes between June 18 and the start of October.')
     if (timeToMinutes(end) <= timeToMinutes(start)) return setError('End time must be after the start time.')
     dispatch({ type: 'MOVE_OCCURRENCE', occ: proposal.occ, newDate: date, startTime: start, endTime: end })
     onClose()
@@ -35,7 +41,11 @@ export default function MoveClassModal({ proposal, onClose }) {
     >
       <p className="muted" style={{ marginTop: 0 }}>
         Confirm the date and time for <strong>{proposal.occ.name}</strong>. Moving it
-        {proposal.occ.recurring ? ' only affects this week — future weeks stay on the regular schedule.' : ' updates this one-off session.'}
+        {proposal.occ.recurring
+          ? ' only affects this week — future weeks stay on the regular schedule.'
+          : isSummer
+            ? ' moves this one day — the rest of the summer week stays put.'
+            : ' updates this one-off session.'}
       </p>
 
       <div className="field">

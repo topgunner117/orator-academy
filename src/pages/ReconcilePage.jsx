@@ -12,7 +12,7 @@ const fmtDateTime = (ts) => {
   const d = new Date(ts)
   return isNaN(d) ? '' : d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
-const ROLE_LABEL = { normal: 'Class', temp: 'Drop-in', makeup: '1-on-1 makeup' }
+const ROLE_LABEL = { normal: 'Class', temp: 'Drop-in', makeup: '1-on-1 makeup', summer: 'Summer lessons' }
 
 export default function ReconcilePage() {
   const { state } = useStore()
@@ -81,6 +81,7 @@ function ReconcileView({ studentId, today }) {
             <span><b>{att.breakdown.normal}</b> normal</span>
             <span><b>{att.breakdown.temp}</b> drop-in (temp)</span>
             <span><b>{att.breakdown.makeup}</b> 1-on-1 makeup</span>
+            <span><b>{att.breakdown.summer || 0}</b> summer</span>
           </div>
         </div>
 

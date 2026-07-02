@@ -14,12 +14,11 @@ npm run dev
 
 Open http://localhost:5180 (it opens automatically).
 
-## Test Mode
+## Saving
 
-The app ships in **Test Mode** — progress is kept for the current browser session (it **survives
-reloads**, stored in `sessionStorage`) and **resets when you close the tab/app**. Flip
-**Settings → Save progress** to switch to permanent `localStorage` saving instead. (The amber
-banner up top reminds you which mode you're in.)
+Saving is always permanent: the backend (when reachable) is the source of truth and the browser's
+`localStorage` is the offline cache. (The old Test Mode / sessionStorage flow was removed when the
+app went live; the **Reset classes** and **Factory reset** buttons in Settings remain.)
 
 ## Sections
 
@@ -27,7 +26,8 @@ banner up top reminds you which mode you're in.)
 - Google-Calendar-style weekly grid (8 AM – 9 PM). Navigate weeks; **Today** jumps back.
 - **+ New class** or click any empty slot to create one.
 - Class types: **Group** (recurring, billed $40/session), **1-on-1** (recurring, single student),
-  **Makeup 1-on-1** (one-off, single student, not billed).
+  **Makeup 1-on-1** (one-off, single student, not billed), **Summer lessons** (a Mon–Fri week
+  during the break — see below).
 - Classes are **recurring weekly** (e.g. "every Wednesday at 6 PM"). Name defaults to day + time
   and is editable.
 - **Hover** a class to see its students; **click** to expand the full detail view.
@@ -35,10 +35,22 @@ banner up top reminds you which mode you're in.)
   only affects **that one week** — future weeks stay on the regular schedule, and that week's
   permanent slot is removed.
 - **Delete** asks whether to remove just that session or all recurring sessions.
-- **Summer break** (June 18 → start of October): no classes can be scheduled; recurring classes
-  skip the window automatically. When you create a class, the calendar **jumps to its first real
-  session** so you always see it immediately (e.g. a class made during the break lands on its first
-  October week rather than seeming to vanish).
+- **Summer break** (June 18 → start of October): regular classes can't be scheduled; recurring
+  classes skip the window automatically. When you create a class, the calendar **jumps to its first
+  real session** so you always see it immediately (e.g. a class made during the break lands on its
+  first October week rather than seeming to vanish).
+
+### ☀️ Summer lessons
+- The only class type allowed **inside** the break window. Click any slot during the break (or
+  ＋ New class → Summer lessons), pick any day of the week, and it snaps to a **Monday–Friday
+  week** of **five separate daily sessions**.
+- Each day is its own session: its **own goals, class notes, ratings, and attendance** — click
+  Monday and you're editing Monday only.
+- The roster is shared by the week: adding a **Permanent** student enrolls them for all five days
+  (a **Temporary** student attends just that one day, and the per-session ✕ removes a student from
+  one day only). Deleting offers "just this day" or "the whole summer week".
+- Summer lessons are **free — never billed**. Money received for them is filed under the
+  **Summer lessons** folder on the Payments page.
 
 ### Class detail
 - Editable name & times, type, date.
@@ -88,7 +100,14 @@ banner up top reminds you which mode you're in.)
   10th, then it becomes outstanding.
 - **10% late fee** toggle in Settings (off by default) — when on, it posts a late-fee line on the
   outstanding balance.
-- 1-on-1 and makeup sessions are not billed automatically.
+- 1-on-1, makeup, and summer-lesson sessions are not billed automatically.
+
+### 📒 Ledgers
+- One **compiled document per month**: every charge billed that month plus every payment / credit
+  that went through — student, reason (method, provider, memo), and a timestamp on each row, with
+  month totals.
+- The **🖨️ Print** button prints just the document, so the teacher keeps a **physical backup** of
+  each month's data.
 
 ### Simulate date (testing)
 **Settings → Simulate date** lets you pretend it's any day. Everything time-based — billing cycles,
@@ -96,8 +115,9 @@ outstanding fees, the schedule's "today" — uses the simulated date. A purple b
 active; "Use real date" turns it off.
 
 ### ⚙️ Settings
-- Toggle saving (Test Mode), toggle the late fee, and **Reset classes** — clears the schedule for
-  the summer while keeping all students, metrics, notes, goals, and payment history.
+- Billing options (price per class, late fee), **Reset classes** — clears the schedule for the
+  summer while keeping all students, metrics, notes, goals, and payment history — and **Factory
+  reset**, which wipes all data back to an empty app.
 
 ## Tech
 React 18 + Vite. State lives in a single reducer (`src/store.jsx`); domain logic is split into

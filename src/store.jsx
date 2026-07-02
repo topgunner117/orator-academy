@@ -12,11 +12,10 @@ export function nowOf(state) {
   return state?.spoofDate ? new Date(state.spoofDate + 'T12:00:00') : new Date()
 }
 
-// Test Mode ON  = progress is saved to sessionStorage — it survives reloads but resets
-//                 when the browser tab/app is closed (default — per project brief).
-// Test Mode OFF = state is written to localStorage and persists permanently.
+// Saving is always permanent: the server (when reachable) is the source of truth and
+// localStorage is the offline cache. (The old Test Mode / sessionStorage flow was removed
+// once the app went live.)
 const initialState = {
-  testMode: true,
   lateFeeEnabled: false,
   lateFeeRate: 0.1, // 10% — editable in Settings
   classPrice: 40, // dollars per group session — editable in Settings
@@ -58,9 +57,6 @@ function reducer(state, action) {
   switch (action.type) {
     case 'LOAD':
       return { ...state, ...action.state }
-
-    case 'SET_TEST_MODE':
-      return { ...state, testMode: action.value }
 
     case 'TOGGLE_LATE_FEE':
       return { ...state, lateFeeEnabled: action.value }
@@ -139,6 +135,64 @@ function reducer(state, action) {
         ...state,
         occurrences: [...state.occurrences, { id: uid(), kind: 'makeup', templateId: null, ...action.occ }],
       }
+
+    // ── Summer lessons: a Mon–Fri week of five separate daily sessions ──────
+    // Each day is its own occurrence (own goals, notes, ratings, attendance), linked by weekId
+    // so the roster and deletion can act on the whole week at once. Never billed.
+    case 'ADD_SUMMER_WEEK':
+      return {
+        ...state,
+        occurrences: [
+          ...state.occurrences,
+          ...action.dates.map((date) => ({
+            id: uid(),
+            kind: 'summer',
+            type: 'summer',
+            templateId: null,
+            weekId: action.weekId,
+            name: action.name,
+            date,
+            startTime: action.startTime,
+            endTime: action.endTime,
+            studentIds: [],
+          })),
+        ],
+      }
+
+    case 'ADD_SUMMER_WEEK_STUDENT': {
+      // Enroll for every day of the week — and clear any earlier single-day removals so the
+      // student really appears on all five days again.
+      const weekOccIds = state.occurrences.filter((o) => o.weekId === action.weekId).map((o) => o.id)
+      const occData = { ...state.occData }
+      for (const id of weekOccIds) {
+        const d = occData[id]
+        if (d?.removedStudentIds?.includes(action.studentId)) {
+          occData[id] = { ...d, removedStudentIds: d.removedStudentIds.filter((x) => x !== action.studentId) }
+        }
+      }
+      return {
+        ...state,
+        occData,
+        occurrences: state.occurrences.map((o) =>
+          o.weekId === action.weekId
+            ? { ...o, studentIds: [...new Set([...(o.studentIds || []), action.studentId])] }
+            : o,
+        ),
+      }
+    }
+
+    case 'REMOVE_SUMMER_WEEK_STUDENT': // un-enroll from every day of the week
+      return {
+        ...state,
+        occurrences: state.occurrences.map((o) =>
+          o.weekId === action.weekId
+            ? { ...o, studentIds: (o.studentIds || []).filter((id) => id !== action.studentId) }
+            : o,
+        ),
+      }
+
+    case 'DELETE_SUMMER_WEEK':
+      return { ...state, occurrences: state.occurrences.filter((o) => o.weekId !== action.weekId) }
 
     case 'UPDATE_TEMPLATE':
       return {
@@ -580,12 +634,11 @@ function read(storage) {
 
 export function StoreProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState, (init) => {
-    // Session data (Test Mode) takes priority — it's the active working session.
+    const local = read(localStorage)
+    if (local) return { ...init, ...local }
+    // Migrate any leftover sessionStorage cache from the old Test Mode flow.
     const session = read(sessionStorage)
     if (session) return { ...init, ...session }
-    // Otherwise adopt permanently-saved data only if saving was enabled.
-    const local = read(localStorage)
-    if (local && local.testMode === false) return { ...init, ...local }
     return init
   })
 
@@ -653,13 +706,8 @@ export function StoreProvider({ children }) {
   useEffect(() => {
     // Local cache/fallback — kept even when synced, so a reload works if the backend is briefly down.
     try {
-      if (state.testMode) {
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-        localStorage.removeItem(STORAGE_KEY)
-      } else {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-        sessionStorage.removeItem(STORAGE_KEY)
-      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+      sessionStorage.removeItem(STORAGE_KEY)
     } catch {
       /* storage full / unavailable — ignore */
     }

@@ -5,7 +5,7 @@ import { getOccurrenceById } from '../../utils/engine.js'
 import { studentName } from '../../utils/helpers.js'
 import Avatar from '../Avatar.jsx'
 
-// target: { kind:'template', templateId } | { kind:'session', occId }
+// target: { kind:'template', templateId } | { kind:'session', occId } | { kind:'summerWeek', weekId }
 // defaultPermanent: true right after a class is made / when first prompted; false when adding later.
 export default function AddStudentsModal({ target, defaultPermanent = true, onClose, title }) {
   const { state, dispatch } = useStore()
@@ -17,6 +17,11 @@ export default function AddStudentsModal({ target, defaultPermanent = true, onCl
     template = state.templates.find((t) => t.id === target.templateId)
     permIds = template?.permanentStudentIds || []
     tempIds = []
+  } else if (target.kind === 'summerWeek') {
+    // The week's shared roster — read it off the first day of the week.
+    const day = state.occurrences.find((o) => o.weekId === target.weekId)
+    permIds = day?.studentIds || []
+    tempIds = []
   } else {
     occ = getOccurrenceById(state, target.occId)
     occId = target.occId
@@ -24,11 +29,14 @@ export default function AddStudentsModal({ target, defaultPermanent = true, onCl
     tempIds = occ?.tempStudentIds || []
   }
 
+  const isSummer = target.kind === 'summerWeek' || occ?.kind === 'summer'
+  const summerWeekId = target.kind === 'summerWeek' ? target.weekId : occ?.weekId
+
   const isPerm = (id) => permIds.includes(id)
   const isTemp = (id) => tempIds.includes(id)
   const inClass = (id) => isPerm(id) || isTemp(id)
 
-  const maxOne = (occ?.type || template?.type) !== 'group' // 1-on-1 / makeup
+  const maxOne = !isSummer && (occ?.type || template?.type) !== 'group' // 1-on-1 / makeup
   const enrolledCount = permIds.length + tempIds.length
 
   const active = state.students.filter((s) => !s.archived)
@@ -37,6 +45,7 @@ export default function AddStudentsModal({ target, defaultPermanent = true, onCl
     if (maxOne && enrolledCount >= 1) return
     if (permanent) {
       if (target.kind === 'template') dispatch({ type: 'ADD_PERMANENT_STUDENT', templateId: target.templateId, studentId: id })
+      else if (isSummer) dispatch({ type: 'ADD_SUMMER_WEEK_STUDENT', weekId: summerWeekId, studentId: id })
       else if (occ.recurring) dispatch({ type: 'ADD_PERMANENT_STUDENT', templateId: occ.templateId, studentId: id })
       else dispatch({ type: 'UPDATE_OCCURRENCE', id: occId, patch: { studentIds: [...permIds, id] } })
     } else {
@@ -48,6 +57,7 @@ export default function AddStudentsModal({ target, defaultPermanent = true, onCl
   const remove = (id) => {
     if (isPerm(id)) {
       if (target.kind === 'template') dispatch({ type: 'REMOVE_PERMANENT_STUDENT', templateId: target.templateId, studentId: id })
+      else if (isSummer) dispatch({ type: 'REMOVE_SUMMER_WEEK_STUDENT', weekId: summerWeekId, studentId: id })
       else if (occ.recurring) dispatch({ type: 'REMOVE_PERMANENT_STUDENT', templateId: occ.templateId, studentId: id })
       else dispatch({ type: 'UPDATE_OCCURRENCE', id: occId, patch: { studentIds: permIds.filter((x) => x !== id) } })
     } else {
@@ -57,7 +67,7 @@ export default function AddStudentsModal({ target, defaultPermanent = true, onCl
 
   const toggle = (id) => (inClass(id) ? remove(id) : add(id))
 
-  const canBePermanent = target.kind === 'template' || occ?.recurring
+  const canBePermanent = target.kind === 'template' || target.kind === 'summerWeek' || occ?.recurring || occ?.kind === 'summer'
   const canBeTemporary = target.kind === 'session'
 
   return (
@@ -82,8 +92,12 @@ export default function AddStudentsModal({ target, defaultPermanent = true, onCl
               <div style={{ fontWeight: 700 }}>{permanent ? 'Permanent' : 'Temporary'} enrollment</div>
               <div className="muted" style={{ fontSize: 12 }}>
                 {permanent
-                  ? 'Student attends this class every session.'
-                  : 'Student attends only this one session, then is removed.'}
+                  ? isSummer
+                    ? 'Student attends every day of this summer week (Mon–Fri).'
+                    : 'Student attends this class every session.'
+                  : isSummer
+                    ? 'Student attends only this one day of the week.'
+                    : 'Student attends only this one session, then is removed.'}
               </div>
             </div>
             <div className="row" style={{ gap: 8 }}>

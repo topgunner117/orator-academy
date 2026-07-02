@@ -229,18 +229,6 @@ select {
   flex-direction: column;
 }
 
-.testbar {
-  background: linear-gradient(90deg, #fff4e0, #fef7ec);
-  border-bottom: 1px solid #f3e2c0;
-  color: #9a6b00;
-  font-size: 12.5px;
-  font-weight: 600;
-  padding: 7px 28px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .page {
   padding: 28px 32px 60px;
   max-width: 1280px;
@@ -461,6 +449,10 @@ select {
 .chip.makeup {
   background: var(--amber-soft);
   color: var(--amber);
+}
+.chip.summer {
+  background: var(--green-soft);
+  color: var(--green);
 }
 .chip.green {
   background: var(--green-soft);
@@ -814,6 +806,9 @@ select {
 .dot.makeup {
   background: #d98a00;
 }
+.dot.summer {
+  background: #0f9d63;
+}
 .break-banner {
   background: var(--amber-soft);
   border: 1px solid #f1dca5;
@@ -949,6 +944,9 @@ select {
 }
 .block.makeup {
   background: linear-gradient(135deg, #c98300, #e7a838);
+}
+.block.summer {
+  background: linear-gradient(135deg, #0f9d63, #2ec27e);
 }
 .block-name {
   font-weight: 700;
@@ -2043,4 +2041,114 @@ select {
 .att-tag.att-absent {
   background: var(--red-soft);
   color: var(--red);
+}
+
+/* ── Ledgers (monthly compiled documents, printable) ─────────────────── */
+.month-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.month-tab {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-soft);
+  cursor: pointer;
+}
+.month-tab:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.month-tab.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.ledger-doc {
+  padding: 30px 34px;
+}
+.ledger-doc-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 2px solid var(--text);
+  padding-bottom: 14px;
+}
+.ledger-doc-studio {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+.ledger-doc-title {
+  font-size: 22px;
+  margin-top: 4px;
+}
+.ledger-doc-meta {
+  font-size: 12px;
+  color: var(--text-soft);
+  text-align: right;
+  line-height: 1.5;
+}
+.doc-table {
+  width: 100%;
+  margin-top: 8px;
+}
+.ledger-doc-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  margin-top: 22px;
+  padding: 14px 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+.ledger-doc-totals .strong {
+  color: var(--text);
+}
+.ledger-doc-foot {
+  margin-top: 18px;
+  font-size: 11px;
+  color: var(--text-soft);
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+/* Print: only the ledger document, on plain paper. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .ledger-doc,
+  .ledger-doc * {
+    visibility: visible;
+  }
+  .ledger-doc {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0;
+    padding: 0;
+  }
+  .ledger-doc-totals {
+    border: 1px solid #999;
+    background: none;
+  }
+  .no-print {
+    display: none !important;
+  }
 }

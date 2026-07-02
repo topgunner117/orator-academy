@@ -73,7 +73,8 @@ export default function ClassDetailModal({ occId, onClose, onMove, onDelete }) {
               <span className={`chip ${occ.type}`}>{CLASS_TYPES[occ.type]?.label}</span>
               <span className="chip">{prettyDate(occ.date)}</span>
               {occ.kind === 'moved' && <span className="chip amber">Moved this week</span>}
-              {!occ.recurring && occ.type !== 'makeup' && <span className="chip">One-off</span>}
+              {occ.type === 'summer' && <span className="chip summer">One day of a Mon–Fri week</span>}
+              {!occ.recurring && occ.type !== 'makeup' && occ.type !== 'summer' && <span className="chip">One-off</span>}
             </div>
           </div>
           <div className="row" style={{ gap: 8 }}>
@@ -130,6 +131,7 @@ export default function ClassDetailModal({ occId, onClose, onMove, onDelete }) {
             <div style={{ alignSelf: 'flex-end', paddingBottom: 9, color: 'var(--text-soft)', fontWeight: 600 }}>
               {formatTimeRange(occ.startTime, occ.endTime)}
               {occ.recurring && <span className="muted"> · changes all weeks</span>}
+              {occ.type === 'summer' && <span className="muted"> · this day only</span>}
             </div>
           </div>
         </div>

@@ -28,7 +28,14 @@ export function attendanceSummary(state, studentId, today = new Date()) {
       if (occ.date > todayIso) continue
       if (!occ.studentIds.includes(studentId)) continue
       const isTemp = (occ.tempStudentIds || []).includes(studentId)
-      const role = occ.kind === 'makeup' || occ.type === 'makeup' ? 'makeup' : isTemp ? 'temp' : 'normal'
+      const role =
+        occ.kind === 'makeup' || occ.type === 'makeup'
+          ? 'makeup'
+          : occ.type === 'summer'
+            ? 'summer'
+            : isTemp
+              ? 'temp'
+              : 'normal'
       sessions.push({
         occId: occ.occId,
         date: occ.date,
@@ -44,7 +51,7 @@ export function attendanceSummary(state, studentId, today = new Date()) {
 
   sessions.sort((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`))
   const present = sessions.filter((s) => s.attendance === 'present')
-  const breakdown = { normal: 0, temp: 0, makeup: 0 }
+  const breakdown = { normal: 0, temp: 0, makeup: 0, summer: 0 }
   present.forEach((s) => {
     breakdown[s.role] = (breakdown[s.role] || 0) + 1
   })

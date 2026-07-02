@@ -29,8 +29,8 @@ const GRID_START_MIN = GRID_START_HOUR * 60
 export default function SchedulePage() {
   const { state } = useStore()
   const [anchor, setAnchor] = useState(() => weekStart(nowOf(state)))
-  const [create, setCreate] = useState(null) // { defaultDate?, defaultDayOfWeek? }
-  const [promptStudents, setPromptStudents] = useState(null) // templateId after creation
+  const [create, setCreate] = useState(null) // { defaultDate?, defaultDayOfWeek?, defaultType? }
+  const [promptStudents, setPromptStudents] = useState(null) // AddStudentsModal target after creation
   const [detailOccId, setDetailOccId] = useState(null)
   const [moveProposal, setMoveProposal] = useState(null)
   const [deleteOcc, setDeleteOcc] = useState(null)
@@ -80,7 +80,11 @@ export default function SchedulePage() {
   }
 
   const slotClick = (day, hour) => {
-    if (isInBreak(day)) return
+    // During the break, a slot click starts a Summer lessons week instead of a regular class.
+    if (isInBreak(day)) {
+      setCreate({ defaultDate: isoDate(day), defaultHour: hour, defaultType: 'summer' })
+      return
+    }
     setCreate({ defaultDayOfWeek: day.getDay(), defaultDate: isoDate(day), defaultHour: hour })
   }
 
@@ -113,12 +117,14 @@ export default function SchedulePage() {
           <span className="legend"><i className="dot group" /> Group</span>
           <span className="legend"><i className="dot oneonone" /> 1-on-1</span>
           <span className="legend"><i className="dot makeup" /> Makeup</span>
+          <span className="legend"><i className="dot summer" /> Summer</span>
         </div>
       </div>
 
       {wholeWeekBreak && (
         <div className="break-banner">
-          ☀️ Summer break — no classes are scheduled between June 18 and the start of October.
+          ☀️ Summer break — regular classes pause between June 18 and the start of October. Click any slot (or ＋ New
+          class → Summer lessons) to add a Mon–Fri summer week.
         </div>
       )}
 
@@ -155,8 +161,8 @@ export default function SchedulePage() {
                 key={di}
                 className={`cal-col${broken ? ' broken' : ''}${sameDay(day, today) ? ' today-col' : ''}`}
                 style={{ height: HOURS.length * HOUR_HEIGHT }}
-                onDragOver={(e) => !broken && e.preventDefault()}
-                onDrop={(e) => !broken && onDrop(e, day)}
+                onDragOver={(e) => (!broken || dragOcc.current?.type === 'summer') && e.preventDefault()}
+                onDrop={(e) => (!broken || dragOcc.current?.type === 'summer') && onDrop(e, day)}
               >
                 {HOURS.map((h) => (
                   <div
@@ -169,15 +175,15 @@ export default function SchedulePage() {
 
                 {broken && <div className="col-break">☀️</div>}
 
-                {!broken &&
-                  occByDay(day.getDay()).map((occ) => (
-                    <ClassBlock
-                      key={occ.occId}
-                      occ={occ}
-                      onOpen={() => setDetailOccId(occ.occId)}
-                      onDragStart={() => (dragOcc.current = occ)}
-                    />
-                  ))}
+                {/* Summer-lesson days are the only sessions that exist inside the break window. */}
+                {occByDay(day.getDay()).map((occ) => (
+                  <ClassBlock
+                    key={occ.occId}
+                    occ={occ}
+                    onOpen={() => setDetailOccId(occ.occId)}
+                    onDragStart={() => (dragOcc.current = occ)}
+                  />
+                ))}
               </div>
             )
           })}
@@ -191,22 +197,24 @@ export default function SchedulePage() {
           defaultDate={create.defaultDate}
           defaultDayOfWeek={create.defaultDayOfWeek}
           defaultHour={create.defaultHour}
+          defaultType={create.defaultType}
           onClose={() => setCreate(null)}
           onCreated={(res) => {
             setCreate(null)
             // Jump to the week of the class's first real session so it's immediately visible
             // (e.g. when creating during the summer break, the calendar moves to October).
             if (res?.firstDate) setAnchor(weekStart(parseISO(res.firstDate)))
-            if (res?.templateId) setPromptStudents(res.templateId)
+            if (res?.templateId) setPromptStudents({ kind: 'template', templateId: res.templateId })
+            else if (res?.summerWeekId) setPromptStudents({ kind: 'summerWeek', weekId: res.summerWeekId })
           }}
         />
       )}
 
       {promptStudents && (
         <AddStudentsModal
-          target={{ kind: 'template', templateId: promptStudents }}
+          target={promptStudents}
           defaultPermanent
-          title="Add students to this class"
+          title={promptStudents.kind === 'summerWeek' ? 'Add students to this summer week' : 'Add students to this class'}
           onClose={() => setPromptStudents(null)}
         />
       )}

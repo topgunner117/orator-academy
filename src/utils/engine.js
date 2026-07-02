@@ -39,11 +39,15 @@ function buildFromTemplate(state, template, date) {
 
 function buildFromStandalone(state, occ) {
   const data = { ...EMPTY_DATA, ...(state.occData[occ.id] || {}) }
-  const permanent = occ.studentIds || []
+  // Honor per-session removals — e.g. taking a student off ONE day of a summer week
+  // while they stay enrolled for the rest of the week.
+  const removed = new Set(data.removedStudentIds || [])
+  const permanent = (occ.studentIds || []).filter((id) => !removed.has(id))
   return {
     occId: occ.id,
     templateId: occ.templateId || null,
-    kind: occ.kind, // 'makeup' | 'moved'
+    weekId: occ.weekId || null, // links the 5 days of a summer-lesson week
+    kind: occ.kind, // 'makeup' | 'moved' | 'summer'
     type: occ.type,
     name: occ.name,
     date: occ.date,

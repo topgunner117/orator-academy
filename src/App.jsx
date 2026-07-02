@@ -5,6 +5,7 @@ import SchedulePage from './pages/SchedulePage.jsx'
 import StudentsPage from './pages/StudentsPage.jsx'
 import ProgressPage from './pages/ProgressPage.jsx'
 import PaymentsPage from './pages/PaymentsPage.jsx'
+import LedgersPage from './pages/LedgersPage.jsx'
 import ReconcilePage from './pages/ReconcilePage.jsx'
 import SettingsPage from './pages/SettingsPage.jsx'
 
@@ -13,13 +14,14 @@ const NAV = [
   { id: 'students', label: 'Students', ico: '👥' },
   { id: 'progress', label: 'Progress', ico: '📈' },
   { id: 'payments', label: 'Payments', ico: '💳' },
+  { id: 'ledgers', label: 'Ledgers', ico: '📒' },
   { id: 'reconcile', label: 'Reconcile', ico: '🧾' },
   { id: 'settings', label: 'Settings', ico: '⚙️' },
 ]
 
 export default function App() {
   const [page, setPage] = useState('schedule')
-  const { state } = useStore()
+  const { state, synced } = useStore()
   const [entered, setEntered] = useState(() => {
     try {
       return sessionStorage.getItem('oa-entered') === '1'
@@ -48,6 +50,7 @@ export default function App() {
     students: <StudentsPage />,
     progress: <ProgressPage />,
     payments: <PaymentsPage />,
+    ledgers: <LedgersPage />,
     reconcile: <ReconcilePage />,
     settings: <SettingsPage />,
   }
@@ -93,19 +96,13 @@ export default function App() {
           ))}
         </nav>
         <div className="sidebar-foot">
-          {state.testMode ? 'Test mode — session only' : 'Saving permanently'}
+          {synced ? 'Synced to cloud' : 'Saved on this device'}
           <br />
           {state.students.filter((s) => !s.archived).length} active students
         </div>
       </aside>
 
       <main className="main">
-        {state.testMode && (
-          <div className="testbar">
-            <span>⚠️</span> Test Mode — progress is kept for this session and{' '}
-            <strong>resets when the app is closed</strong>. Enable permanent saving in Settings.
-          </div>
-        )}
         {state.spoofDate && (
           <div className="spoofbar">
             <span>🕓</span> Simulating{' '}

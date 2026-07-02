@@ -37,24 +37,6 @@ export default function SettingsPage() {
       </div>
 
       <div className="stack" style={{ maxWidth: 720, gap: 16 }}>
-        <SettingRow
-          title="Save progress"
-          desc={
-            state.testMode
-              ? 'Test Mode is ON — progress is kept for this browser session (survives reloads) and resets when the tab/app is closed.'
-              : 'Permanent saving is ON — changes are stored in this browser and persist across closes.'
-          }
-        >
-          <div className="row" style={{ gap: 10 }}>
-            <span className="muted" style={{ fontSize: 12 }}>{state.testMode ? 'Test mode' : 'Saving'}</span>
-            <button
-              className={`switch${!state.testMode ? ' on' : ''}`}
-              onClick={() => dispatch({ type: 'SET_TEST_MODE', value: !state.testMode })}
-              aria-label="Toggle saving"
-            />
-          </div>
-        </SettingRow>
-
         <BillingRow />
 
         <SpoofDateRow />

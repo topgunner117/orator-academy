@@ -57,6 +57,21 @@ export function firstOccurrenceOnOrAfter(dayOfWeek, from = new Date()) {
   return isoDate(d)
 }
 
+// Monday of the week containing `d` (summer-lesson weeks run Mon–Fri).
+export function mondayOf(d) {
+  const r = new Date(d)
+  r.setHours(0, 0, 0, 0)
+  const day = r.getDay()
+  r.setDate(r.getDate() + (day === 0 ? 1 : 1 - day)) // Sunday snaps forward to Monday
+  return r
+}
+
+// The five ISO dates (Mon–Fri) of the summer-lesson week containing `d`.
+export function summerWeekDates(d) {
+  const mon = mondayOf(d)
+  return Array.from({ length: 5 }, (_, i) => isoDate(addDays(mon, i)))
+}
+
 // "18:00" -> minutes since midnight
 export function timeToMinutes(t) {
   const [h, m] = t.split(':').map(Number)
