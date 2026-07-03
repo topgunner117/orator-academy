@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { useStore, nowOf } from '../store.jsx'
-import { ledgerMonths, monthLedger } from '../utils/ledgers.js'
+import { ledgerMonths, monthLedger, groupByStudent } from '../utils/ledgers.js'
 import { parseISO } from '../utils/dates.js'
 
 const fmtDate = (iso) =>
@@ -21,6 +21,7 @@ export default function LedgersPage() {
 
   const months = useMemo(() => ledgerMonths(state, today), [state, today])
   const [selected, setSelected] = useState('')
+  const [view, setView] = useState('time') // 'time' = all transactions in order | 'student' = sectioned per student
   const ym = selected || months[0] || ''
   const doc = useMemo(() => (ym ? monthLedger(state, ym, today) : null), [state, ym, today])
 
@@ -51,25 +52,35 @@ export default function LedgersPage() {
         </div>
       ) : (
         <>
-          <div className="month-tabs no-print">
-            {months.map((k) => (
-              <button key={k} className={`month-tab${k === ym ? ' on' : ''}`} onClick={() => setSelected(k)}>
-                {monthLedger(state, k, today).label}
+          <div className="spread wrap no-print" style={{ gap: 12, alignItems: 'flex-start' }}>
+            <div className="month-tabs" style={{ marginBottom: 16 }}>
+              {months.map((k) => (
+                <button key={k} className={`month-tab${k === ym ? ' on' : ''}`} onClick={() => setSelected(k)}>
+                  {monthLedger(state, k, today).label}
+                </button>
+              ))}
+            </div>
+            <div className="seg" title="How the month's transactions are organized">
+              <button className={view === 'time' ? 'on' : ''} onClick={() => setView('time')}>
+                All by time
               </button>
-            ))}
+              <button className={view === 'student' ? 'on' : ''} onClick={() => setView('student')}>
+                By student
+              </button>
+            </div>
           </div>
 
-          {doc && <LedgerDocument doc={doc} state={state} today={today} />}
+          {doc && <LedgerDocument doc={doc} state={state} today={today} view={view} />}
         </>
       )}
     </div>
   )
 }
 
-function LedgerDocument({ doc, state, today }) {
+function LedgerDocument({ doc, state, today, view = 'time' }) {
   const studio = state.config?.studioName || 'Orator Academy'
   return (
-    <div className="card ledger-doc">
+    <div className="card ledger-doc print-doc">
       <div className="ledger-doc-head">
         <div>
           <div className="ledger-doc-studio">{studio}</div>
@@ -80,10 +91,91 @@ function LedgerDocument({ doc, state, today }) {
           {today.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
           <br />
           {doc.charges.length} charge{doc.charges.length === 1 ? '' : 's'} · {doc.received.length} transaction
-          {doc.received.length === 1 ? '' : 's'}
+          {doc.received.length === 1 ? '' : 's'} · {view === 'student' ? 'sectioned by student' : 'in time order'}
         </div>
       </div>
 
+      {view === 'student' ? (
+        <ByStudentSections doc={doc} />
+      ) : (
+        <ByTimeTables doc={doc} />
+      )}
+
+      {/* Month summary */}
+      <div className="ledger-doc-totals">
+        <span>Charged <b>${doc.totals.charged.toFixed(2)}</b></span>
+        <span>Payments <b>${doc.totals.payments.toFixed(2)}</b></span>
+        <span>Credits <b>${doc.totals.credits.toFixed(2)}</b></span>
+        <span>Summer <b>${doc.totals.summer.toFixed(2)}</b></span>
+        <span className="strong">Net for {doc.label}: <b>${(doc.totals.charged - doc.totals.received).toFixed(2)}</b></span>
+      </div>
+
+      <div className="ledger-doc-foot">
+        {studio} · monthly ledger · {doc.label} — keep with the studio's physical records.
+      </div>
+    </div>
+  )
+}
+
+// Every student's transactions in their own section — first student, then the next — with
+// per-student subtotals. The studentless Summer-lessons folder comes last.
+function ByStudentSections({ doc }) {
+  const sections = groupByStudent(doc)
+  if (sections.length === 0)
+    return <p className="muted" style={{ fontSize: 13, marginTop: 16 }}>No activity this month.</p>
+  return (
+    <div>
+      {sections.map((sec) => (
+        <div className="ledger-sec" key={sec.studentId}>
+          <div className="ledger-sec-head">
+            <span>{sec.student}</span>
+            <span className="ledger-sec-sub">
+              charged ${sec.charged.toFixed(2)} · received ${sec.received.toFixed(2)}
+            </span>
+          </div>
+          <table className="ledger-table doc-table">
+            <thead>
+              <tr>
+                <th>Date &amp; time</th>
+                <th>Description / reason</th>
+                <th className="num">Charge</th>
+                <th className="num">Payment / Credit</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sec.rows.map((r) => (
+                <tr key={r.id}>
+                  <td>
+                    <div className="led-date">{fmtDate(r.date)}</div>
+                    {r.kind !== 'charge' && <div className="led-time">{fmtDateTime(r.ts)}</div>}
+                  </td>
+                  <td>
+                    {r.label}
+                    {r.auto && <span className="auto-tag" title="Auto-applied from a forwarded payment email">auto</span>}
+                  </td>
+                  <td className="num">{r.charge > 0 ? `$${r.charge.toFixed(2)}` : ''}</td>
+                  <td className="num credit">{r.credit > 0 ? `$${r.credit.toFixed(2)}` : ''}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={2} className="foot-label">{sec.student} — subtotal</td>
+                <td className="num strong">${sec.charged.toFixed(2)}</td>
+                <td className="num credit strong">${sec.received.toFixed(2)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// The original layout: charges billed, then every payment / credit in time order.
+function ByTimeTables({ doc }) {
+  return (
+    <div>
       {/* Charges billed */}
       <div className="sub-label" style={{ marginTop: 18 }}>Charges billed</div>
       {doc.charges.length === 0 ? (
@@ -155,19 +247,6 @@ function LedgerDocument({ doc, state, today }) {
           </tfoot>
         </table>
       )}
-
-      {/* Month summary */}
-      <div className="ledger-doc-totals">
-        <span>Charged <b>${doc.totals.charged.toFixed(2)}</b></span>
-        <span>Payments <b>${doc.totals.payments.toFixed(2)}</b></span>
-        <span>Credits <b>${doc.totals.credits.toFixed(2)}</b></span>
-        <span>Summer <b>${doc.totals.summer.toFixed(2)}</b></span>
-        <span className="strong">Net for {doc.label}: <b>${(doc.totals.charged - doc.totals.received).toFixed(2)}</b></span>
-      </div>
-
-      <div className="ledger-doc-foot">
-        {studio} · monthly ledger · {doc.label} — keep with the studio's physical records.
-      </div>
     </div>
   )
 }

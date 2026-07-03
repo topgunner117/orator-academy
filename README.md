@@ -106,8 +106,13 @@ app went live; the **Reset classes** and **Factory reset** buttons in Settings r
 - One **compiled document per month**: every charge billed that month plus every payment / credit
   that went through — student, reason (method, provider, memo), and a timestamp on each row, with
   month totals.
+- A switch picks the layout: **All by time** (charges, then every transaction chronologically) or
+  **By student** (each student's transactions in their own section with subtotals, one after the
+  other; the Summer-lessons folder last).
 - The **🖨️ Print** button prints just the document, so the teacher keeps a **physical backup** of
   each month's data.
+- Each student's **statement of account** on the Payments page has its own **🖨️ Print statement**
+  button too — it prints the running ledger with a proper document header.
 
 ### Simulate date (testing)
 **Settings → Simulate date** lets you pretend it's any day. Everything time-based — billing cycles,

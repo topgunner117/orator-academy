@@ -63,12 +63,17 @@ export default function PaymentsPage() {
       </div>
 
       <div className="card card-pad">
-        <div className="spread wrap" style={{ marginBottom: 16, gap: 12 }}>
+        <div className="spread wrap no-print" style={{ marginBottom: 16, gap: 12 }}>
           <h3 style={{ fontSize: 17 }}>{selStudent ? `Statement — ${studentName(selStudent)}` : 'Statement of account'}</h3>
           {selected && (
-            <button className="btn btn-sm" onClick={() => setSelected('')}>
-              ← Choose another student
-            </button>
+            <div className="row" style={{ gap: 8 }}>
+              <button className="btn btn-sm" onClick={() => window.print()} title="Print this student's statement">
+                🖨️ Print statement
+              </button>
+              <button className="btn btn-sm" onClick={() => setSelected('')}>
+                ← Choose another student
+              </button>
+            </div>
           )}
         </div>
 
@@ -199,7 +204,20 @@ function StudentLedger({ studentId, today }) {
   }
 
   return (
-    <div>
+    <div className="print-doc">
+      {/* Document header — only visible on the printed statement */}
+      <div className="print-only">
+        <div className="ledger-doc-head">
+          <div>
+            <div className="ledger-doc-studio">{state.config?.studioName || 'Orator Academy'}</div>
+            <h2 className="ledger-doc-title">Statement of account — {studentName(s)}</h2>
+          </div>
+          <div className="ledger-doc-meta">
+            Generated {today.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+          </div>
+        </div>
+      </div>
+
       {/* Account summary */}
       <div className="ledger-summary">
         <div>
@@ -224,7 +242,7 @@ function StudentLedger({ studentId, today }) {
             ${led.totalCharges.toFixed(2)} · ${led.totalCredits.toFixed(2)}
           </div>
         </div>
-        <div className="reminder-cta">
+        <div className="reminder-cta no-print">
           <button
             className="btn btn-primary"
             onClick={() => setReminderOpen(true)}
@@ -296,7 +314,7 @@ function StudentLedger({ studentId, today }) {
       </div>
 
       {/* Entry forms */}
-      <div className="ledger-forms">
+      <div className="ledger-forms no-print">
         <div className="ledger-form">
           <div className="sub-label">Record payment received (cash / check)</div>
           <div className="record-pay">

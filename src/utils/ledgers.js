@@ -121,3 +121,47 @@ export function monthLedger(state, ym, today = new Date()) {
 
   return { ym, label: monthLabel(ym), charges, received, totals }
 }
+
+// Reshape a month's document into per-student sections (alphabetical, the studentless
+// Summer-lessons folder last). Each section merges the student's charges and payments into
+// one chronological list with charged / received subtotals — the "by student" ledger view.
+export function groupByStudent(doc) {
+  const map = new Map()
+  const section = (id, name) => {
+    if (!map.has(id)) map.set(id, { studentId: id, student: name, rows: [] })
+    return map.get(id)
+  }
+  for (const c of doc.charges) {
+    section(c.studentId, c.student).rows.push({
+      id: c.id,
+      ts: `${c.date}T00:00:00`,
+      date: c.date,
+      kind: 'charge',
+      label: c.description,
+      charge: c.amount,
+      credit: 0,
+    })
+  }
+  for (const r of doc.received) {
+    section(r.studentId ?? '__summer__', r.student).rows.push({
+      id: r.id,
+      ts: r.ts,
+      date: r.date,
+      kind: r.kind,
+      label: r.reason,
+      charge: 0,
+      credit: r.amount,
+      auto: r.auto,
+    })
+  }
+  const sections = [...map.values()]
+  for (const s of sections) {
+    s.rows.sort((a, b) => a.ts.localeCompare(b.ts))
+    s.charged = round2(s.rows.reduce((sum, r) => sum + r.charge, 0))
+    s.received = round2(s.rows.reduce((sum, r) => sum + r.credit, 0))
+  }
+  return sections.sort(
+    (a, b) =>
+      (a.studentId === '__summer__') - (b.studentId === '__summer__') || a.student.localeCompare(b.student),
+  )
+}

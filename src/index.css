@@ -2125,16 +2125,41 @@ select {
   padding-top: 10px;
 }
 
-/* Print: only the ledger document, on plain paper. */
+/* By-student view: one section per student, subtotals per section. */
+.ledger-sec {
+  margin-top: 22px;
+}
+.ledger-sec-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-weight: 700;
+  font-size: 14.5px;
+  border-bottom: 2px solid var(--text);
+  padding-bottom: 6px;
+}
+.ledger-sec-sub {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+/* Print-only content (e.g. the statement's document header). */
+.print-only {
+  display: none;
+}
+
+/* Print: only the marked document (a monthly ledger or a student statement), on plain paper. */
 @media print {
   body * {
     visibility: hidden;
   }
-  .ledger-doc,
-  .ledger-doc * {
+  .print-doc,
+  .print-doc * {
     visibility: visible;
   }
-  .ledger-doc {
+  .print-doc {
     position: absolute;
     left: 0;
     top: 0;
@@ -2144,11 +2169,15 @@ select {
     border-radius: 0;
     padding: 0;
   }
+  .print-only {
+    display: block;
+  }
   .ledger-doc-totals {
     border: 1px solid #999;
     background: none;
   }
-  .no-print {
+  .no-print,
+  .print-doc .icon-btn {
     display: none !important;
   }
 }
