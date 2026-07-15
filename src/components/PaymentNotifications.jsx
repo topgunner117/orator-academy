@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
-import { useStore } from '../store.jsx'
+import { useStore, normSender } from '../store.jsx'
 import Modal from './Modal.jsx'
 import StudentGrid from './StudentGrid.jsx'
+import { studentById, studentName } from '../utils/helpers.js'
 
 const fmtDateTime = (ts) => {
   const d = new Date(ts)
@@ -66,15 +67,22 @@ export default function PaymentNotifications() {
 }
 
 function AssignPaymentModal({ payment, onClose }) {
-  const { dispatch } = useStore()
+  const { state, dispatch } = useStore()
   const [reason, setReason] = useState('group') // group | oneonone | summer  (default group; if /40 it's group anyway)
   const [siblings, setSiblings] = useState(false)
   const [picked, setPicked] = useState([])
   const [amount, setAmount] = useState(payment.amount ? String(payment.amount) : '')
+  const [remember, setRemember] = useState(false)
 
   const isSummer = reason === 'summer'
   const need = siblings ? 2 : 1
   const amt = Math.round((parseFloat(amount) || 0) * 100) / 100
+
+  // Sender name → whether we can offer/show the "remember this sender" option (single-student only).
+  const senderKey = normSender(payment.senderName)
+  const existingMapId = senderKey ? (state.senderMappings || {})[senderKey] : null
+  const existingMapStudent = existingMapId ? studentById(state, existingMapId) : null
+  const canRemember = !isSummer && !siblings && !!senderKey
 
   const togglePick = (id) =>
     setPicked((cur) => {
@@ -89,6 +97,11 @@ function AssignPaymentModal({ payment, onClose }) {
     if (isSummer) {
       dispatch({ type: 'ASSIGN_UNASSIGNED_TO_SUMMER', id: payment.id, amount: amt })
     } else if (picked.length === need) {
+      // Optionally remember this sender so future unidentified payments from them auto-credit
+      // this student (only meaningful for a single-student assignment with a real sender name).
+      if (remember && canRemember && picked.length === 1) {
+        dispatch({ type: 'SET_SENDER_MAPPING', senderName: payment.senderName, studentId: picked[0] })
+      }
       dispatch({ type: 'ASSIGN_UNASSIGNED_PAYMENT', id: payment.id, studentIds: picked, amount: amt })
     } else return
     onClose()
@@ -137,6 +150,21 @@ function AssignPaymentModal({ payment, onClose }) {
         </div>
       </div>
 
+      {existingMapStudent && (
+        <div className="hint" style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'space-between' }}>
+          <span>
+            📌 Payments from <strong>{payment.senderName}</strong> with no name in the memo are auto-credited to{' '}
+            <strong>{studentName(existingMapStudent)}</strong>.
+          </span>
+          <button
+            className="btn btn-sm"
+            onClick={() => dispatch({ type: 'DELETE_SENDER_MAPPING', senderName: payment.senderName })}
+          >
+            Forget
+          </button>
+        </div>
+      )}
+
       {/* Reason */}
       <div className="sub-label" style={{ marginTop: 14 }}>Reason</div>
       <div className="seg-row">
@@ -181,6 +209,17 @@ function AssignPaymentModal({ payment, onClose }) {
             </div>
           )}
           <StudentGrid selectedIds={picked} onPick={togglePick} autoFocus />
+
+          {canRemember && (
+            <label className="remember-sender" style={{ marginTop: 12 }}>
+              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+              <span>
+                Always credit payments from <strong>{payment.senderName}</strong> to{' '}
+                {picked.length === 1 ? <strong>{studentName(studentById(state, picked[0]))}</strong> : 'this student'} when no name
+                is in the memo
+              </span>
+            </label>
+          )}
         </>
       )}
     </Modal>

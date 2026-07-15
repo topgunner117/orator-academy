@@ -71,7 +71,25 @@ export async function processEmail(email, { capture = true } = {}) {
     const { state } = await store.getState()
     const matched = matchStudentsInMemo(parsed.memo, state.students || [])
 
-    if (!parsed.amount || matched.length === 0) {
+    // Remembered sender → student mapping: if nobody was named in the memo but the teacher has
+    // told us to always credit this sender to a student, honor it (only when we know the amount).
+    let mappedStudentId = null
+    if (matched.length === 0 && parsed.amount) {
+      const key = norm(parsed.senderName)
+      const sid = key ? (state.senderMappings || {})[key] : null
+      if (sid && (state.students || []).some((s) => s.id === sid && !s.archived)) mappedStudentId = sid
+    }
+
+    if (mappedStudentId) {
+      const { payment } = await store.applyEmailPayment({
+        studentId: mappedStudentId,
+        amount: parsed.amount,
+        dateReceived: date,
+        emailRef: { ...refBase, viaSenderMapping: true },
+      })
+      await rec('applied', mappedStudentId)
+      result = { status: 'applied', key, parsed, studentId: mappedStudentId, paymentId: payment.id, viaSenderMapping: true }
+    } else if (!parsed.amount || matched.length === 0) {
       // Any payment we can't fully resolve — no amount OR no student named — goes to the
       // Notifications queue for manual review (the teacher sets the amount and the student there).
       await store.addUnassignedPayment({

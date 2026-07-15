@@ -8,6 +8,7 @@ import {
   attendanceSummary,
   studentNotes,
   activeGoals,
+  classGoalKeysForStudent,
 } from '../utils/progress.js'
 import { studentName, studentById } from '../utils/helpers.js'
 import Avatar from '../components/Avatar.jsx'
@@ -27,6 +28,14 @@ export default function ProgressPage() {
   const attendance = useMemo(() => attendanceSummary(rows), [rows])
   const notes = useMemo(() => studentNotes(rows), [rows])
   const goals = useMemo(() => activeGoals(state), [state])
+  // Class goals shown for the report are scoped to the classes the selected student attends —
+  // a student never sees another class's goals. Individual goals are already per-student.
+  const classGoalsForStudent = useMemo(() => {
+    if (!selected) return goals.classGoals
+    const keys = classGoalKeysForStudent(state, selected)
+    return goals.classGoals.filter((g) => keys.has(g.goalKey))
+  }, [goals, state, selected])
+  const selStudent = selected ? studentById(state, selected) : null
 
   const addRequest = () => {
     if (!reqStudent) return
@@ -200,8 +209,13 @@ export default function ProgressPage() {
       {/* All active goals */}
       <div className="report-grid">
         <div className="card card-pad">
-          <h3 style={{ fontSize: 16, marginBottom: 12 }}>Ongoing class goals</h3>
-          <GoalOverview list={goals.classGoals} />
+          <h3 style={{ fontSize: 16, marginBottom: 12 }}>
+            Ongoing class goals{selStudent ? ` · ${studentName(selStudent)}’s classes` : ''}
+          </h3>
+          <GoalOverview
+            list={classGoalsForStudent}
+            emptyHint={selStudent ? `${studentName(selStudent)} has no class goals in their classes yet.` : undefined}
+          />
         </div>
         <div className="card card-pad">
           <h3 style={{ fontSize: 16, marginBottom: 12 }}>Ongoing individual goals</h3>
@@ -212,8 +226,8 @@ export default function ProgressPage() {
   )
 }
 
-function GoalOverview({ list, showStudent, state }) {
-  if (list.length === 0) return <p className="muted" style={{ fontSize: 13 }}>No goals yet.</p>
+function GoalOverview({ list, showStudent, state, emptyHint }) {
+  if (list.length === 0) return <p className="muted" style={{ fontSize: 13 }}>{emptyHint || 'No goals yet.'}</p>
   return (
     <div className="stack">
       {list.map((g) => (

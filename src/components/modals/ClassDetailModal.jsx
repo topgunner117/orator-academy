@@ -4,8 +4,9 @@ import AddStudentsModal from './AddStudentsModal.jsx'
 import PhotoImportModal from './PhotoImportModal.jsx'
 import StarRating from '../StarRating.jsx'
 import Avatar from '../Avatar.jsx'
+import GoalTree from '../GoalTree.jsx'
 import { useStore } from '../../store.jsx'
-import { getOccurrenceById, goalKeyFor, orderedGoals } from '../../utils/engine.js'
+import { getOccurrenceById, goalKeyFor } from '../../utils/engine.js'
 import { METRICS, CLASS_TYPES } from '../../constants.js'
 import { formatTimeRange, prettyDate, parseISO, isoDate } from '../../utils/dates.js'
 import { studentName, studentById } from '../../utils/helpers.js'
@@ -137,12 +138,14 @@ export default function ClassDetailModal({ occId, onClose, onMove, onDelete }) {
         </div>
 
         {/* Class goals */}
-        <Section title="Class goals" sub="Shared objective for this class. Carries over each session until met.">
-          <GoalList
-            goals={orderedGoals(goalStore.classGoals)}
+        <Section title="Class goals" sub="Shared objectives for this class — drag to reorder or nest into sub-goals, click to edit. Carries over each session until met.">
+          <GoalTree
+            goals={goalStore.classGoals}
             onAdd={(text) => dispatch({ type: 'ADD_GOAL', goalKey, text, date: today })}
             onToggle={(g, met) => dispatch({ type: 'SET_GOAL_MET', goalKey, goalId: g.id, met, date: today })}
             onDelete={(g) => dispatch({ type: 'DELETE_GOAL', goalKey, goalId: g.id })}
+            onReorder={(next) => dispatch({ type: 'SET_CLASS_GOALS', goalKey, goals: next })}
+            onEditText={(g, text) => dispatch({ type: 'EDIT_GOAL_TEXT', goalKey, goalId: g.id, text })}
             placeholder="e.g. Finish first speech draft"
           />
         </Section>
@@ -208,66 +211,15 @@ function Section({ title, sub, children }) {
   )
 }
 
-function GoalList({ goals, onAdd, onToggle, onDelete, placeholder }) {
-  const [text, setText] = useState('')
-
-  const add = () => {
-    if (!text.trim()) return
-    onAdd(text.trim())
-    setText('')
-  }
-
-  return (
-    <div className="goal-list">
-      {goals.map((g) => (
-        <div key={g.id} className={`goal-item${g.met ? ' done' : ''}`}>
-          <div className="goal-main">
-            <div className="goal-text">{g.text}</div>
-            <div className="goal-meta">
-              Set {prettyDate(g.createdDate)}
-              {g.met && g.completedDate ? ` · completed ${prettyDate(g.completedDate)}` : ''}
-            </div>
-          </div>
-          {g.met ? (
-            <button className="chip green" title="Reopen" onClick={() => onToggle(g, false)}>
-              ✓ Complete
-            </button>
-          ) : (
-            <div className="row" style={{ gap: 6 }}>
-              <button className="btn btn-sm" onClick={() => onToggle(g, true)}>
-                ✓ Met
-              </button>
-              <button className="icon-btn" title="Delete goal" style={{ width: 30, height: 30 }} onClick={() => onDelete(g)}>
-                ✕
-              </button>
-            </div>
-          )}
-        </div>
-      ))}
-      <div className="goal-add">
-        <input
-          className="input"
-          value={text}
-          placeholder={placeholder}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && add()}
-        />
-        <button className="btn" onClick={add} disabled={!text.trim()}>
-          Add
-        </button>
-      </div>
-    </div>
-  )
-}
-
 function StudentBlock({ occ, studentId, isTemp, sessionDate }) {
   const { state, dispatch } = useStore()
   const [open, setOpen] = useState(false)
   const s = studentById(state, studentId)
   const evals = occ.data.evaluations?.[studentId] || { metrics: {}, note: '' }
   const attendance = occ.data.attendance?.[studentId]
-  // Individual goals are global to the student — they follow them into every class.
-  const studentGoals = orderedGoals(state.studentGoals[studentId] || [])
+  // Individual goals are global to the student — they follow them into every class. Stored order
+  // is preserved (drag to reorder/nest), so no auto-sort here.
+  const studentGoals = state.studentGoals[studentId] || []
 
   const setMetric = (key, value) =>
     dispatch({ type: 'SET_EVALUATION', occId: occ.occId, studentId, metricKey: key, value })
@@ -317,12 +269,14 @@ function StudentBlock({ occ, studentId, isTemp, sessionDate }) {
 
       {open && (
         <div className="student-block-body">
-          <div className="sub-label">Individual goal <span className="muted" style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 500 }}>· follows this student into every class</span></div>
-          <GoalList
+          <div className="sub-label">Individual goal <span className="muted" style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 500 }}>· follows this student into every class · drag to reorder or nest, click to edit</span></div>
+          <GoalTree
             goals={studentGoals}
             onAdd={(text) => dispatch({ type: 'ADD_STUDENT_GOAL', studentId, text, date: sessionDate })}
             onToggle={(g, met) => dispatch({ type: 'SET_STUDENT_GOAL_MET', studentId, goalId: g.id, met, date: sessionDate })}
             onDelete={(g) => dispatch({ type: 'DELETE_STUDENT_GOAL', studentId, goalId: g.id })}
+            onReorder={(next) => dispatch({ type: 'SET_STUDENT_GOALS', studentId, goals: next })}
+            onEditText={(g, text) => dispatch({ type: 'EDIT_STUDENT_GOAL_TEXT', studentId, goalId: g.id, text })}
             placeholder="e.g. Reduce filler words"
           />
 

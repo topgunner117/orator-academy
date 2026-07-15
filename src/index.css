@@ -1180,6 +1180,86 @@ select {
   flex: 1;
 }
 
+/* Goal tree — drag to reorder / nest, click text to edit */
+.goal-node {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.goal-tree .goal-node {
+  margin-bottom: 8px;
+}
+.goal-node.done {
+  opacity: 0.72;
+  background: var(--surface-2);
+}
+.goal-node.done .goal-text {
+  text-decoration: line-through;
+}
+.goal-node.dragging {
+  opacity: 0.45;
+}
+.goal-grip {
+  cursor: grab;
+  color: var(--text-faint);
+  font-size: 15px;
+  line-height: 1;
+  user-select: none;
+  flex-shrink: 0;
+}
+.goal-node:active .goal-grip {
+  cursor: grabbing;
+}
+.goal-text-edit {
+  cursor: text;
+}
+.goal-text-edit .edit-pencil {
+  opacity: 0;
+}
+.goal-text-edit:hover .edit-pencil {
+  opacity: 1;
+}
+.goal-edit-input {
+  font-weight: 600;
+  font-size: 13.5px;
+  padding: 4px 8px;
+  width: 100%;
+}
+/* drop indicators while dragging */
+.goal-node.drop-before {
+  box-shadow: inset 0 3px 0 -1px var(--accent);
+}
+.goal-node.drop-after {
+  box-shadow: inset 0 -3px 0 -1px var(--accent);
+}
+.goal-node.drop-child {
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+  background: var(--accent-soft);
+}
+
+/* "Remember this sender → student" checkbox in the assign-payment modal */
+.remember-sender {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--text-soft);
+  cursor: pointer;
+  padding: 9px 11px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 8px;
+}
+.remember-sender input {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
 /* Student blocks in detail */
 .student-block {
   overflow: hidden;

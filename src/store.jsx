@@ -12,6 +12,10 @@ export function nowOf(state) {
   return state?.spoofDate ? new Date(state.spoofDate + 'T12:00:00') : new Date()
 }
 
+// Normalize a payment sender's name into a stable key. MUST match the server's `norm`
+// (paymentPipeline.js) so a mapping saved here is found when the poller looks it up.
+export const normSender = (s) => (s || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
+
 // Saving is always permanent: the server (when reachable) is the source of truth and
 // localStorage is the offline cache. (The old Test Mode / sessionStorage flow was removed
 // once the app went live.)
@@ -32,6 +36,7 @@ const initialState = {
   adjustments: [], // { id, studentId, monthKey, amount, reason, date } — credit that reduces a month's bill
   unassignedPayments: [], // email payments with no student in the memo → Notifications (assign to a student)
   summerPayments: [], // { id, amount, dateReceived, ts, note, method } — summer-lessons folder (no student)
+  senderMappings: {}, // normalized senderName -> studentId: always auto-credit this sender's otherwise-unidentified payments to that student
   progressRequests: [], // { id, studentId, note, requestedDate, resolved }
   config: {
     // Studio-level integration config (synced to the backend; holds NO secrets).
@@ -418,6 +423,28 @@ function reducer(state, action) {
       return { ...state, goals: { ...state.goals, [action.goalKey]: { ...g, classGoals: remove(g.classGoals) } } }
     }
 
+    // Rename a class goal in place (inline text edit).
+    case 'EDIT_GOAL_TEXT': {
+      const g = state.goals[action.goalKey]
+      if (!g) return state
+      const text = (action.text || '').trim()
+      if (!text) return state
+      return {
+        ...state,
+        goals: {
+          ...state.goals,
+          [action.goalKey]: { ...g, classGoals: g.classGoals.map((it) => (it.id === action.goalId ? { ...it, text } : it)) },
+        },
+      }
+    }
+
+    // Replace a class's whole goal array — used by drag-and-drop reorder / re-parent, which
+    // computes the new ordered+nested list in the component and hands it back wholesale.
+    case 'SET_CLASS_GOALS': {
+      const g = state.goals[action.goalKey] || { classGoals: [], studentGoals: {} }
+      return { ...state, goals: { ...state.goals, [action.goalKey]: { ...g, classGoals: action.goals } } }
+    }
+
     // ── Individual student goals (global — follow the student into any class) ──
     case 'ADD_STUDENT_GOAL': {
       const list = state.studentGoals[action.studentId] || []
@@ -450,6 +477,24 @@ function reducer(state, action) {
         studentGoals: { ...state.studentGoals, [action.studentId]: list.filter((it) => it.id !== action.goalId) },
       }
     }
+
+    // Rename an individual (global) student goal in place (inline text edit).
+    case 'EDIT_STUDENT_GOAL_TEXT': {
+      const list = state.studentGoals[action.studentId] || []
+      const text = (action.text || '').trim()
+      if (!text) return state
+      return {
+        ...state,
+        studentGoals: {
+          ...state.studentGoals,
+          [action.studentId]: list.map((it) => (it.id === action.goalId ? { ...it, text } : it)),
+        },
+      }
+    }
+
+    // Replace a student's whole goal array — used by drag-and-drop reorder / re-parent.
+    case 'SET_STUDENT_GOALS':
+      return { ...state, studentGoals: { ...state.studentGoals, [action.studentId]: action.goals } }
 
     // ── Payments (account-level ledger entries) ─────────────────────────────
     case 'ADD_PAYMENT':
@@ -532,6 +577,23 @@ function reducer(state, action) {
 
     case 'DISMISS_UNASSIGNED_PAYMENT':
       return { ...state, unassignedPayments: state.unassignedPayments.filter((x) => x.id !== action.id) }
+
+    // ── Remembered sender → student mappings ─────────────────────────────────
+    // When a parent's payments never carry a name in the memo, the teacher can tell the app to
+    // always credit that sender to a student. The email pipeline consults this before flagging
+    // a payment as unassigned. Keyed by normalized sender name.
+    case 'SET_SENDER_MAPPING': {
+      const key = normSender(action.senderName)
+      if (!key || !action.studentId) return state
+      return { ...state, senderMappings: { ...(state.senderMappings || {}), [key]: action.studentId } }
+    }
+
+    case 'DELETE_SENDER_MAPPING': {
+      const key = normSender(action.senderName)
+      const next = { ...(state.senderMappings || {}) }
+      delete next[key]
+      return { ...state, senderMappings: next }
+    }
 
     // ── Summer-lessons folder (studio-level, no student) ─────────────────────
     case 'ADD_SUMMER_PAYMENT':

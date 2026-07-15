@@ -61,6 +61,28 @@ export function studentNotes(rows) {
   return rows.filter((r) => r.note && r.note.trim()).map((r) => ({ date: r.date, className: r.className, note: r.note }))
 }
 
+// The set of goalKeys (class ids) a student is enrolled in — a permanent member of a recurring
+// template, on a standalone session's roster, or a temporary drop-in on any session. Used to show
+// a student only the class goals from the classes they actually attend.
+export function classGoalKeysForStudent(state, studentId) {
+  const keys = new Set()
+  if (!studentId) return keys
+  for (const t of state.templates) {
+    if ((t.permanentStudentIds || []).includes(studentId)) keys.add(t.id)
+  }
+  for (const o of state.occurrences) {
+    if ((o.studentIds || []).includes(studentId)) keys.add(o.id)
+  }
+  // Temporary drop-ins live in occData, keyed by occId. A recurring occId is `${templateId}::${iso}`,
+  // so the class goal for that session hangs off the template; a standalone occId is its own key.
+  for (const [occId, data] of Object.entries(state.occData || {})) {
+    if ((data?.tempStudentIds || []).includes(studentId)) {
+      keys.add(occId.includes('::') ? occId.split('::')[0] : occId)
+    }
+  }
+  return keys
+}
+
 // All currently-active goals (for the Progress overview). Class goals come from live classes;
 // individual goals are global to each (non-archived) student.
 export function activeGoals(state) {
