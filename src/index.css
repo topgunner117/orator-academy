@@ -2225,6 +2225,25 @@ select {
   color: var(--text-soft);
 }
 
+/* Compiled notes document (class notes / student presentation notes) — print-only. */
+.notes-doc-entry {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--surface-2);
+}
+.notes-doc-meta {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-soft);
+  margin-bottom: 6px;
+}
+.notes-doc-body {
+  font-size: 13.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
 /* Print-only content (e.g. the statement's document header). */
 .print-only {
   display: none;
@@ -2259,5 +2278,12 @@ select {
   .no-print,
   .print-doc .icon-btn {
     display: none !important;
+  }
+  /* Keep a single notes entry from splitting across a page break. */
+  .notes-doc-entry {
+    break-inside: avoid;
+    background: none;
+    border: 1px solid #999;
+    margin-bottom: 10px;
   }
 }

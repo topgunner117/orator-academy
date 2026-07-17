@@ -5,10 +5,11 @@ import PhotoImportModal from './PhotoImportModal.jsx'
 import StarRating from '../StarRating.jsx'
 import Avatar from '../Avatar.jsx'
 import GoalTree from '../GoalTree.jsx'
-import { useStore } from '../../store.jsx'
+import { useStore, nowOf } from '../../store.jsx'
 import { getOccurrenceById, goalKeyFor } from '../../utils/engine.js'
+import { classNotesHistory } from '../../utils/classNotes.js'
 import { METRICS, CLASS_TYPES } from '../../constants.js'
-import { formatTimeRange, prettyDate, parseISO, isoDate } from '../../utils/dates.js'
+import { formatTimeRange, prettyDate, longDate, parseISO, isoDate } from '../../utils/dates.js'
 import { studentName, studentById } from '../../utils/helpers.js'
 
 export default function ClassDetailModal({ occId, onClose, onMove, onDelete }) {
@@ -31,6 +32,7 @@ export default function ClassDetailModal({ occId, onClose, onMove, onDelete }) {
   const goalKey = goalKeyFor(occ)
   const goalStore = state.goals[goalKey] || { classGoals: [], studentGoals: {} }
   const today = isoDate(parseISO(occ.date))
+  const noteSessions = classNotesHistory(state, occ)
 
   const updateMeta = (patch) => {
     if (occ.recurring) dispatch({ type: 'UPDATE_TEMPLATE', id: occ.templateId, patch })
@@ -43,6 +45,7 @@ export default function ClassDetailModal({ occId, onClose, onMove, onDelete }) {
   }
 
   return (
+    <>
     <Modal title="" onClose={onClose} wide>
       <div className="detail">
         {/* Header */}
@@ -185,6 +188,23 @@ export default function ClassDetailModal({ occId, onClose, onMove, onDelete }) {
             ))}
           </div>
         )}
+
+        {/* Print every session's class notes for this class (with each session's date & time). */}
+        <div className="spread wrap no-print" style={{ marginTop: 24, gap: 12 }}>
+          <div className="muted" style={{ fontSize: 12.5 }}>
+            {noteSessions.length === 0
+              ? 'No class notes written for this class yet.'
+              : `${noteSessions.length} session${noteSessions.length === 1 ? '' : 's'} with class notes.`}
+          </div>
+          <button
+            className="btn btn-sm"
+            onClick={() => window.print()}
+            disabled={noteSessions.length === 0}
+            title={noteSessions.length === 0 ? 'No class notes to print yet' : 'Print all class notes for this class'}
+          >
+            🖨️ Print class notes
+          </button>
+        </div>
       </div>
 
       {addStudents && (
@@ -198,6 +218,11 @@ export default function ClassDetailModal({ occId, onClose, onMove, onDelete }) {
 
       {photoFile && <PhotoImportModal occId={occ.occId} file={photoFile} onClose={() => setPhotoFile(null)} />}
     </Modal>
+
+    {/* Print-only: a compiled document of this class's notes across every session. Rendered as a
+        page-level sibling (outside the modal overlay) so the print layout isn't offset by it. */}
+    <ClassNotesDocument occ={occ} sessions={noteSessions} studioName={state.config?.studioName} today={nowOf(state)} />
+    </>
   )
 }
 
@@ -207,6 +232,51 @@ function Section({ title, sub, children }) {
       <h3 style={{ fontSize: 16 }}>{title}</h3>
       {sub && <div className="muted" style={{ fontSize: 12.5, marginBottom: 10, marginTop: 2 }}>{sub}</div>}
       {children}
+    </div>
+  )
+}
+
+// Print-only compiled document: every session's class notes for this one class, in date order,
+// each stamped with the session's date and scheduled time. Hidden on screen (only the class
+// detail's contents show); `window.print()` reveals just this via the shared print-doc CSS.
+function ClassNotesDocument({ occ, sessions, studioName, today }) {
+  const studio = studioName || 'Orator Academy'
+  return (
+    <div className="print-doc notes-doc">
+      <div className="print-only">
+        <div className="ledger-doc-head">
+          <div>
+            <div className="ledger-doc-studio">{studio}</div>
+            <h2 className="ledger-doc-title">Class notes — {occ.name}</h2>
+          </div>
+          <div className="ledger-doc-meta">
+            Generated {today.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+            <br />
+            {sessions.length} session{sessions.length === 1 ? '' : 's'} with notes
+          </div>
+        </div>
+
+        {sessions.length === 0 ? (
+          <p className="muted" style={{ fontSize: 13, marginTop: 16 }}>No class notes recorded for this class.</p>
+        ) : (
+          <div className="stack" style={{ marginTop: 16 }}>
+            {sessions.map((sn) => (
+              <div className="notes-doc-entry" key={sn.occId}>
+                <div className="notes-doc-meta">
+                  {longDate(sn.date)}
+                  {sn.startTime && ` · ${formatTimeRange(sn.startTime, sn.endTime)}`}
+                  {sn.moved && ' · moved'}
+                </div>
+                <div className="notes-doc-body">{sn.notes}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="ledger-doc-foot">
+          {studio} · class notes · {occ.name} — keep with the studio's physical records.
+        </div>
+      </div>
     </div>
   )
 }

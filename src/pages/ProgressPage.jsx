@@ -12,7 +12,7 @@ import {
 } from '../utils/progress.js'
 import { studentName, studentById } from '../utils/helpers.js'
 import Avatar from '../components/Avatar.jsx'
-import { prettyDate } from '../utils/dates.js'
+import { prettyDate, longDate } from '../utils/dates.js'
 
 export default function ProgressPage() {
   const { state, dispatch } = useStore()
@@ -121,14 +121,21 @@ export default function ProgressPage() {
       <div className="card card-pad" style={{ marginBottom: 22 }}>
         <div className="spread wrap" style={{ marginBottom: 16, gap: 12 }}>
           <h3 style={{ fontSize: 17 }}>Progress report</h3>
-          <select className="select" style={{ maxWidth: 240 }} value={selected} onChange={(e) => setSelected(e.target.value)}>
-            <option value="">Select a student…</option>
-            {active.map((s) => (
-              <option key={s.id} value={s.id}>
-                {studentName(s)}
-              </option>
-            ))}
-          </select>
+          <div className="row wrap" style={{ gap: 8 }}>
+            {selected && notes.length > 0 && (
+              <button className="btn btn-sm" onClick={() => window.print()} title="Print this student's presentation notes">
+                🖨️ Print notes
+              </button>
+            )}
+            <select className="select" style={{ maxWidth: 240 }} value={selected} onChange={(e) => setSelected(e.target.value)}>
+              <option value="">Select a student…</option>
+              {active.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {studentName(s)}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {!selected ? (
@@ -220,6 +227,53 @@ export default function ProgressPage() {
         <div className="card card-pad">
           <h3 style={{ fontSize: 16, marginBottom: 12 }}>Ongoing individual goals</h3>
           <GoalOverview list={goals.studentGoals} showStudent state={state} />
+        </div>
+      </div>
+
+      {/* Print-only: just this student's presentation notes (no ratings, attendance, or goals). */}
+      {selStudent && (
+        <StudentNotesDocument student={selStudent} notes={notes} studioName={state.config?.studioName} today={nowOf(state)} />
+      )}
+    </div>
+  )
+}
+
+// Print-only compiled document of a student's presentation notes, newest first, each stamped with
+// the session date and class. Hidden on screen; window.print() reveals just this (shared print-doc CSS).
+function StudentNotesDocument({ student, notes, studioName, today }) {
+  const studio = studioName || 'Orator Academy'
+  return (
+    <div className="print-doc notes-doc">
+      <div className="print-only">
+        <div className="ledger-doc-head">
+          <div>
+            <div className="ledger-doc-studio">{studio}</div>
+            <h2 className="ledger-doc-title">Presentation notes — {studentName(student)}</h2>
+          </div>
+          <div className="ledger-doc-meta">
+            Generated {today.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+            <br />
+            {notes.length} note{notes.length === 1 ? '' : 's'} · last 6 months
+          </div>
+        </div>
+
+        {notes.length === 0 ? (
+          <p className="muted" style={{ fontSize: 13, marginTop: 16 }}>No presentation notes recorded.</p>
+        ) : (
+          <div className="stack" style={{ marginTop: 16 }}>
+            {notes.map((n, i) => (
+              <div className="notes-doc-entry" key={i}>
+                <div className="notes-doc-meta">
+                  {longDate(n.date)} · {n.className}
+                </div>
+                <div className="notes-doc-body">{n.note}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="ledger-doc-foot">
+          {studio} · presentation notes · {studentName(student)} — keep with the studio's physical records.
         </div>
       </div>
     </div>

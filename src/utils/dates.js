@@ -116,6 +116,12 @@ export function shortDate(d) {
   return `${DAYS_SHORT[date.getDay()]} ${date.getMonth() + 1}/${date.getDate()}`
 }
 
+// "Wednesday, June 10, 2026" — spelled out for the rows of a printed document.
+export function longDate(d) {
+  const date = typeof d === 'string' ? parseISO(d) : d
+  return date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+}
+
 // All dates a given weekday falls on within a calendar month (for billing counts)
 export function weekdayDatesInMonth(year, month, dayOfWeek) {
   const dates = []
