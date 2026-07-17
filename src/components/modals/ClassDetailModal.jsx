@@ -8,6 +8,7 @@ import GoalTree from '../GoalTree.jsx'
 import { useStore, nowOf } from '../../store.jsx'
 import { getOccurrenceById, goalKeyFor } from '../../utils/engine.js'
 import { classNotesHistory } from '../../utils/classNotes.js'
+import { printDocument } from '../../utils/print.js'
 import { METRICS, CLASS_TYPES } from '../../constants.js'
 import { formatTimeRange, prettyDate, longDate, parseISO, isoDate } from '../../utils/dates.js'
 import { studentName, studentById } from '../../utils/helpers.js'
@@ -198,7 +199,11 @@ export default function ClassDetailModal({ occId, onClose, onMove, onDelete }) {
           </div>
           <button
             className="btn btn-sm"
-            onClick={() => window.print()}
+            onClick={() =>
+              printDocument(
+                `Class Notes - ${occ.name} - ${nowOf(state).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}`,
+              )
+            }
             disabled={noteSessions.length === 0}
             title={noteSessions.length === 0 ? 'No class notes to print yet' : 'Print all class notes for this class'}
           >

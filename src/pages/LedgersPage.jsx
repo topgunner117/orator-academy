@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { useStore, nowOf } from '../store.jsx'
 import { ledgerMonths, monthLedger, groupByStudent } from '../utils/ledgers.js'
 import { parseISO } from '../utils/dates.js'
+import { printDocument } from '../utils/print.js'
 
 const fmtDate = (iso) =>
   parseISO(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
@@ -36,7 +37,7 @@ export default function LedgersPage() {
           </div>
         </div>
         {doc && (
-          <button className="btn btn-primary" onClick={() => window.print()}>
+          <button className="btn btn-primary" onClick={() => printDocument(`Monthly Ledger - ${doc.label}`)}>
             🖨️ Print this ledger
           </button>
         )}

@@ -5,6 +5,7 @@ import { isoDate, parseISO } from '../utils/dates.js'
 import { studentName, studentById, studentPhones } from '../utils/helpers.js'
 import { buildReminderMessage } from '../utils/sms.js'
 import { sendPaymentReminder } from '../utils/api.js'
+import { printDocument } from '../utils/print.js'
 import Modal from '../components/Modal.jsx'
 import StudentGrid from '../components/StudentGrid.jsx'
 import PaymentNotifications from '../components/PaymentNotifications.jsx'
@@ -67,7 +68,15 @@ export default function PaymentsPage() {
           <h3 style={{ fontSize: 17 }}>{selStudent ? `Statement — ${studentName(selStudent)}` : 'Statement of account'}</h3>
           {selected && (
             <div className="row" style={{ gap: 8 }}>
-              <button className="btn btn-sm" onClick={() => window.print()} title="Print this student's statement">
+              <button
+                className="btn btn-sm"
+                onClick={() =>
+                  printDocument(
+                    `Statement - ${studentName(selStudent)} - ${today.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}`,
+                  )
+                }
+                title="Print this student's statement"
+              >
                 🖨️ Print statement
               </button>
               <button className="btn btn-sm" onClick={() => setSelected('')}>

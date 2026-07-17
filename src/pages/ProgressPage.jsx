@@ -13,6 +13,7 @@ import {
 import { studentName, studentById } from '../utils/helpers.js'
 import Avatar from '../components/Avatar.jsx'
 import { prettyDate, longDate } from '../utils/dates.js'
+import { printDocument } from '../utils/print.js'
 
 export default function ProgressPage() {
   const { state, dispatch } = useStore()
@@ -123,7 +124,15 @@ export default function ProgressPage() {
           <h3 style={{ fontSize: 17 }}>Progress report</h3>
           <div className="row wrap" style={{ gap: 8 }}>
             {selected && notes.length > 0 && (
-              <button className="btn btn-sm" onClick={() => window.print()} title="Print this student's presentation notes">
+              <button
+                className="btn btn-sm"
+                onClick={() =>
+                  printDocument(
+                    `Presentation Notes - ${studentName(selStudent)} - ${nowOf(state).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}`,
+                  )
+                }
+                title="Print this student's presentation notes"
+              >
                 🖨️ Print notes
               </button>
             )}
