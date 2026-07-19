@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import { useStore, nowOf } from './store.jsx'
-import Landing from './Landing.jsx'
 import SchedulePage from './pages/SchedulePage.jsx'
 import StudentsPage from './pages/StudentsPage.jsx'
 import ProgressPage from './pages/ProgressPage.jsx'
@@ -19,31 +18,9 @@ const NAV = [
   { id: 'settings', label: 'Settings', ico: '⚙️' },
 ]
 
-export default function App() {
+export default function App({ onLogout }) {
   const [page, setPage] = useState('schedule')
   const { state, synced } = useStore()
-  const [entered, setEntered] = useState(() => {
-    try {
-      return sessionStorage.getItem('oa-entered') === '1'
-    } catch {
-      return false
-    }
-  })
-
-  if (!entered) {
-    return (
-      <Landing
-        onEnter={() => {
-          try {
-            sessionStorage.setItem('oa-entered', '1')
-          } catch {
-            /* ignore */
-          }
-          setEntered(true)
-        }}
-      />
-    )
-  }
 
   const pages = {
     schedule: <SchedulePage />,
@@ -58,7 +35,7 @@ export default function App() {
   return (
     <div className="app">
       <aside className="sidebar">
-        <div className="brand" onClick={() => setEntered(false)} title="Back to intro" role="button" tabIndex={0}>
+        <div className="brand" title="Orator Academy Database">
           <div className="brand-mark">
             <svg viewBox="0 0 28 28" fill="none" aria-hidden="true">
               <circle cx="14" cy="14" r="3.1" fill="#fff" />
@@ -99,6 +76,9 @@ export default function App() {
           {synced ? 'Synced to cloud' : 'Saved on this device'}
           <br />
           {state.students.filter((s) => !s.archived).length} active students
+          <button className="signout-btn" onClick={onLogout} title="Sign out">
+            🔒 Sign out
+          </button>
         </div>
       </aside>
 

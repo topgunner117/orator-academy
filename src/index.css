@@ -221,6 +221,24 @@ select {
   padding: 12px 10px 2px;
   line-height: 1.6;
 }
+.signout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 8px;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 600;
+}
+.signout-btn:hover {
+  background: var(--red-soft);
+  border-color: #f0c4cb;
+  color: var(--red);
+}
 
 .main {
   flex: 1;

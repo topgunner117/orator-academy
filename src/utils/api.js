@@ -1,9 +1,49 @@
 import { API_BASE } from '../config.js'
 
-// Small fetch wrapper that throws a useful Error on non-2xx.
-async function req(path, opts) {
-  const res = await fetch(`${API_BASE}${path}`, opts)
+// ── Session token (from POST /api/auth/login) ────────────────────────────────
+const TOKEN_KEY = 'oa-token'
+const STATE_CACHE_KEY = 'orator-academy-v1'
+
+export const getToken = () => {
+  try {
+    return localStorage.getItem(TOKEN_KEY) || ''
+  } catch {
+    return ''
+  }
+}
+const setToken = (t) => {
+  try {
+    localStorage.setItem(TOKEN_KEY, t)
+  } catch {
+    /* ignore */
+  }
+}
+export const clearToken = () => {
+  try {
+    localStorage.removeItem(TOKEN_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+// The app registers a handler here so an expired/invalid token (any 401) bounces back to login.
+let onUnauthorized = () => {}
+export const setUnauthorizedHandler = (fn) => {
+  onUnauthorized = typeof fn === 'function' ? fn : () => {}
+}
+
+// Small fetch wrapper: attaches the session token, throws a useful Error on non-2xx, and on a 401
+// clears the token and notifies the app to show the login screen.
+async function req(path, opts = {}) {
+  const token = getToken()
+  const headers = { ...(opts.headers || {}) }
+  if (token) headers.Authorization = `Bearer ${token}`
+  const res = await fetch(`${API_BASE}${path}`, { ...opts, headers })
   if (!res.ok) {
+    if (res.status === 401 && path !== '/api/auth/login') {
+      clearToken()
+      onUnauthorized()
+    }
     let msg = `Request failed (${res.status})`
     try {
       msg = (await res.json()).error || msg
@@ -16,6 +56,41 @@ async function req(path, opts) {
 }
 
 const jsonPost = (path, body) => req(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+// Exchange the password for a session token. Throws on wrong password / lockout.
+export async function login(password) {
+  const res = await req('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  })
+  if (res?.token) setToken(res.token)
+  return res // { token, usingFallbackPassword }
+}
+
+// True if the stored token is still valid on the server.
+export async function checkAuth() {
+  if (!getToken()) return false
+  try {
+    const { authenticated } = await req('/api/auth/status')
+    return !!authenticated
+  } catch {
+    return false
+  }
+}
+
+// Clear the token AND the locally cached snapshot, so signing out leaves no data behind.
+export function logout() {
+  clearToken()
+  try {
+    localStorage.removeItem(STATE_CACHE_KEY)
+    sessionStorage.removeItem(STATE_CACHE_KEY)
+    sessionStorage.removeItem('oa-entered')
+  } catch {
+    /* ignore */
+  }
+}
 
 // Send a class-notes photo to the backend for Claude to transcribe + organize.
 // image: a base64 data URL. context: { className, date, roster: [{id, name}] }.

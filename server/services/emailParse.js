@@ -70,40 +70,6 @@ async function parseWithClaude(provider, { subject, text }) {
   return { amount: money(out.amount), senderName: out.senderName || '', memo: out.memo || '', transactionId: out.transactionId || null, usedModel: EMAIL_MODEL }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST HOOK — remove before real production.
-// Any email containing the magic word "yuvantesting" anywhere is treated as a PayPal
-// payment for testing, so you can send a PLAIN email from any account (no real
-// Venmo/PayPal/Zelle formatting) and have it credited. The amount is the first $-figure
-// (or "amount/paid/pay" number) in the email; the student is matched from the email text,
-// so include the student's name like a normal memo. Deliberately bypasses Claude so it
-// works for free and deterministically. Delete this block (and the call below) to disable.
-const TEST_WORD = 'yuvantesting'
-function parseTestEmail(blob) {
-  // Strip the trigger word FIRST so it never becomes part of the memo or student matching —
-  // e.g. so "yuvantesting" can't be mistaken for a student named "yuvan". The rest of the email
-  // is then treated exactly like a real PayPal payment: real amount + real memo (student names).
-  const cleaned = blob.replace(new RegExp(TEST_WORD, 'ig'), ' ').replace(/\s+/g, ' ').trim()
-  const m =
-    /\$\s*([\d,]+(?:\.\d{1,2})?)/.exec(cleaned) ||
-    /\b(?:amount|paid|pay|for)\D{0,10}?([\d,]+(?:\.\d{1,2})?)\b/i.exec(cleaned)
-  const amount = m ? money(m[1]) : 0
-  const fromM = /\bfrom\s+([A-Z][\w.'-]+(?:\s+[A-Z][\w.'-]+){0,2})/i.exec(cleaned)
-  return {
-    provider: 'paypal',
-    amount,
-    senderName: fromM ? fromM[1].trim() : 'Test payment',
-    memo: cleaned, // the email text WITHOUT the trigger word → real student name(s) match here
-    transactionId: null,
-    usedModel: 'test-hook',
-    // A test email is always a payment intent — never flag it. If the amount couldn't be read,
-    // the pipeline still routes it to Notifications for manual review (set the amount there).
-    flagged: false,
-    reason: null,
-  }
-}
-// ─────────────────────────────────────────────────────────────────────────────
-
 // Main entry. Returns { provider, amount, senderName, memo, transactionId, usedModel|null,
 // flagged, reason } — flagged transactions are surfaced for review instead of auto-applied.
 export async function parsePaymentEmail(email) {
@@ -112,11 +78,6 @@ export async function parsePaymentEmail(email) {
   const text = collapse(email.text || stripHtml(email.html || ''))
   const provider = detectProvider({ from, subject, text, html: email.html })
   const blob = `${subject} ${text}`
-
-  // TEST HOOK (see above): "yuvantesting" → treat as a PayPal payment, credit the named student.
-  if (new RegExp(TEST_WORD, 'i').test(blob)) {
-    return parseTestEmail(blob)
-  }
 
   if (isRefundOrDecline(blob)) {
     return { provider, flagged: true, reason: 'refund-or-non-payment', amount: 0, senderName: '', memo: '', transactionId: null, usedModel: null }

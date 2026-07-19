@@ -1,30 +1,39 @@
 import React, { useEffect, useState } from 'react'
 import './landing.css'
-
-const PASSWORD = 'orator'
+import { login } from './utils/api.js'
 
 export default function Landing({ onEnter }) {
   const [ready, setReady] = useState(false)
   const [leaving, setLeaving] = useState(false)
   const [pw, setPw] = useState('')
   const [error, setError] = useState(false)
+  const [errMsg, setErrMsg] = useState('')
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     const t = setTimeout(() => setReady(true), 60)
     return () => clearTimeout(t)
   }, [])
 
-  const enter = () => {
-    if (pw.trim().toLowerCase() !== PASSWORD) {
+  // The password is verified on the SERVER (POST /api/auth/login) — it isn't in this bundle. On
+  // success we hold a session token and play the exit animation before entering the app.
+  const enter = async () => {
+    if (!pw.trim() || busy) return
+    setBusy(true)
+    setError(false)
+    try {
+      await login(pw)
+      setLeaving((l) => {
+        if (l) return l
+        setTimeout(onEnter, 760) // let the exit animation play
+        return true
+      })
+    } catch (e) {
       setError(true)
-      setTimeout(() => setError(false), 650)
-      return
+      setErrMsg(e?.message || 'Incorrect password')
+      setBusy(false)
+      setTimeout(() => setError(false), 900)
     }
-    setLeaving((l) => {
-      if (l) return l
-      setTimeout(onEnter, 760) // let the exit animation play
-      return true
-    })
   }
 
   return (
@@ -77,8 +86,8 @@ export default function Landing({ onEnter }) {
               onKeyDown={(e) => e.key === 'Enter' && enter()}
               aria-label="Password"
             />
-            <button className="oa-enter" onClick={enter}>
-              <span className="oa-enter-label">Enter the studio</span>
+            <button className="oa-enter" onClick={enter} disabled={busy}>
+              <span className="oa-enter-label">{busy ? 'Checking…' : 'Enter the studio'}</span>
               <span className="oa-enter-ico">→</span>
               <span className="oa-enter-shine" />
             </button>
@@ -86,7 +95,7 @@ export default function Landing({ onEnter }) {
         </div>
 
         <div className={`oa-hint${error ? ' err' : ''}`}>
-          {error ? 'Incorrect password — try again' : (
+          {error ? (errMsg || 'Incorrect password — try again') : (
             <>
               Type the password in the box, then press <kbd>Enter</kbd>
             </>

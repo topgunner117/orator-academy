@@ -8,6 +8,8 @@ import aiRoutes from './routes/ai.js'
 import stateRoutes from './routes/state.js'
 import smsRoutes from './routes/sms.js'
 import integrationsRoutes from './routes/integrations.js'
+import authRoutes from './routes/auth.js'
+import { requireAuth, usingFallbackPassword } from './services/auth.js'
 import * as store from './services/store.js'
 import { startParserPoller, emailConfigured } from './jobs/pollParserInbox.js'
 import { smsConfigured } from './services/twilio.js'
@@ -20,10 +22,14 @@ process.on('uncaughtException', (err) => console.error('[uncaughtException]', er
 const app = express()
 const PORT = process.env.PORT || 8787
 
+// Behind Railway's proxy — trust X-Forwarded-For so the login throttle sees real client IPs.
+app.set('trust proxy', true)
+
 // Images + whole-state snapshots arrive as JSON, so allow a generous body size.
 app.use(cors())
 app.use(express.json({ limit: '25mb' }))
 
+// ── Public routes (no auth): health check + login ──
 app.get('/api/health', (req, res) => {
   res.json({
     ok: true,
@@ -33,6 +39,12 @@ app.get('/api/health', (req, res) => {
     model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6',
   })
 })
+app.use('/api/auth', authRoutes)
+
+// ── Everything below here requires a valid session token ──
+// This is the real security boundary: student data, payments, AI, SMS, and the dev/reset tools
+// are all unreachable without logging in first.
+app.use('/api', requireAuth)
 
 app.use('/api/ai', aiRoutes)
 app.use('/api/state', stateRoutes)
@@ -66,6 +78,11 @@ store
       const email = emailConfigured() ? 'live' : 'dormant'
       console.log(`Orator Academy server on http://localhost:${PORT}`)
       console.log(`  AI: ${ai}  ·  SMS: ${sms}  ·  Email poller: ${email}`)
+      if (usingFallbackPassword) {
+        console.warn('  ⚠️  AUTH: APP_PASSWORD is not set — using the fallback password "orator". Set APP_PASSWORD to a strong secret in production.')
+      } else {
+        console.log('  Auth: APP_PASSWORD set ✓')
+      }
       startParserPoller()
     })
   })
